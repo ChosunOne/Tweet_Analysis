@@ -4,11 +4,21 @@ import nltk
 import operator
 from collections import OrderedDict
 
-def tweetParseLineNLTK(json_object, keyword_list, user_list, word_list):
-    tweet = nltk.wordpunct_tokenize(json_object['text'])
+def tweetParseLineNLTK(json_object, keyword_list, user_list, word_list, retweet_list):
+    tweetText = json_object['text']
+    tweet = nltk.wordpunct_tokenize(tweetText)
     hashtag = False
     mention = False
+    retweet = False
     for word in tweet:
+
+        if retweet and (tweetText not in retweet_list):
+            retweet_list[tweetText] = 1
+            retweet = False
+        if retweet and (tweetText in retweet_list):
+            votes = retweet_list[tweetText]
+            retweet_list[tweetText] = votes + 1
+            retweet = False
            
         if hashtag and (word not in keyword_list):
             keyword_list[word] = 1
@@ -30,6 +40,8 @@ def tweetParseLineNLTK(json_object, keyword_list, user_list, word_list):
             hashtag = True
         if '@' in word:
             mention = True
+        if 'RT' in word:
+            retweet = True
 
         if word not in word_list:
             word_list[word] = 1
@@ -44,6 +56,7 @@ def main():
     users = {}
     keywords = {}
     words = {}
+    retweets = {}
     POPULATION_THRESHOLD = 50
     json_file = 'goldenglobes.json'
     print('Loading ', json_file, '...')
@@ -68,7 +81,7 @@ def main():
     for item in json_data:
         progress = progress + 1
         try:
-            tweetParseLineNLTK(item, hashtags, users, words)
+            tweetParseLineNLTK(item, hashtags, users, words, retweets)
         except:
             print(item['_id']['$oid'])
             print('An error occurred parsing this line')
@@ -96,6 +109,8 @@ def main():
     sorted_users = OrderedDict(sorted(users.items(), key=lambda users: users[1]))
     print('Sorting keywords')
     sorted_keywords = OrderedDict(sorted(filtered_keywords.items(), key=lambda filtered_keywords: filtered_keywords[1]))
+    print('Sorting retweets')
+    sorted_retweets = OrderedDict(sorted(retweets.items(), key=lambda retweets: retweets[1]))
 
     print('Popular Hashtags')
 
@@ -123,5 +138,14 @@ def main():
                 print(word, " ", sorted_keywords[word])
         except:
             print('Keyword is unreadable')
+
+    print('Popular Retweets')
+
+    for tweet in sorted_retweets:
+        try:
+            if retweets[tweet] > 100:
+                print(tweet, " ", sorted_retweets[tweet])
+        except:
+            print('Tweet is unreadable')
 
 main()
