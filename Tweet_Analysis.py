@@ -2,24 +2,40 @@ print('Loading application dependencies')
 import json
 import nltk
 import operator
+import itertools
 from collections import OrderedDict
 
-def tweetParseLineNLTK(json_object, keyword_list, user_list, word_list, retweet_list):
-    tweetText = json_object['text']
-    tweet = nltk.wordpunct_tokenize(tweetText)
+class tweeter:
+    def __init__(self):
+        self.score = 0
+        self.tweets = []
+        self.userName = ''
+        self.userId = 0
+
+class tweet:
+    def __init__(self):
+        self.text = ''
+        self.score = 0
+        self.tweetId = 0
+
+def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, user_list):
+    twt = tweet()
+    twt.text = json_object['text']
+    twt.tweetId = json_object['id']
+
+    twter = tweeter()
+    twter.tweets.append(twt)
+    twter.userName = json_object['user']['screen_name']
+    twter.userId = json_object['user']['id']
+
+    text = nltk.wordpunct_tokenize(twt.text)
+    
     hashtag = False
     mention = False
     retweet = False
-    for word in tweet:
 
-        if retweet and (tweetText not in retweet_list):
-            retweet_list[tweetText] = 1
-            retweet = False
-        if retweet and (tweetText in retweet_list):
-            votes = retweet_list[tweetText]
-            retweet_list[tweetText] = votes + 1
-            retweet = False
-           
+    for word in text:
+
         if hashtag and (word not in keyword_list):
             keyword_list[word] = 1
             hashtag = False
@@ -28,13 +44,23 @@ def tweetParseLineNLTK(json_object, keyword_list, user_list, word_list, retweet_
             keyword_list[word] = votes + 1
             hashtag = False
 
-        if mention and (word not in user_list):
-            user_list[word] = 1
-            mention = False
-        if mention and (word in user_list):
-            votes = user_list[word]
-            user_list[word] = votes + 1
-            mention = False
+        if retweet and mention:
+
+                mention = False
+                retweet = False
+
+                if word not in user_list:
+                    pass
+                else:
+                    id = user_list[word]
+                    mentioned = tweeter_list[id]
+
+                    for t in mentioned.tweets:
+                        if t in text:
+                            t.score = t.score + 1
+
+                    mentioned.score = mentioned.score + 1
+
 
         if '#' in word:
             hashtag = True
@@ -48,16 +74,26 @@ def tweetParseLineNLTK(json_object, keyword_list, user_list, word_list, retweet_
         else:
             freq = word_list[word]
             word_list[word] = freq + 1
+
+    if twter.userId not in tweeter_list:
+        tweeter_list[twter.userId] = twter
+        user_list[twter.userName] = twter.userId
+    else:
+        tweeter_list[twter.userId].tweets.append(twt)
             
 def main():
     file_data = []
     json_data = []
+    
     hashtags = {}
-    users = {}
     keywords = {}
     words = {}
-    retweets = {}
-    POPULATION_THRESHOLD = 50
+    tweeters = {}
+    userIdTable = {}
+
+    POPULARITY_THRESHOLD = 100
+    RETWEET_THRESHOLD = 100
+    KEYWORD_THRESHOLD = 10000
     json_file = 'goldenglobes.json'
     print('Loading ', json_file, '...')
     with open(json_file, 'r', encoding="utf8") as f:
@@ -81,7 +117,7 @@ def main():
     for item in json_data:
         progress = progress + 1
         try:
-            tweetParseLineNLTK(item, hashtags, users, words, retweets)
+            tweetParseLineObjects(item, hashtags, tweeters, words, userIdTable)
         except:
             print(item['_id']['$oid'])
             print('An error occurred parsing this line')
@@ -98,25 +134,21 @@ def main():
     print('Filtering Keywords')
     filtered_keywords = {}
     for keyword in keywords:
-        tagtup = nltk.tag.str2tuple(keyword)
-        tag = tagtup[1]
-        if (tag != 'CNJ') and (tag != 'DET') and (tag !='EX') and (tag != 'PRO') and (tag != 'TO'):
+        if (keyword != 'RT') and (keyword != '#') and (keyword != '@') and (keyword != 'the') and (keyword != 'is'):
             filtered_keywords[keyword] = keywords[keyword]
 
     print('Sorting hashtags')
-    sorted_hashtags = OrderedDict(sorted(hashtags.items(), key=lambda hashtags: hashtags[1]))
+    sorted_hashtags = OrderedDict(sorted(hashtags.items(), key=lambda hashtags: hashtags[1], reverse=True))
     print('Sorting users')
-    sorted_users = OrderedDict(sorted(users.items(), key=lambda users: users[1]))
+    sorted_users = OrderedDict(sorted(tweeters.items(), key=lambda tweeters: tweeters[1].score, reverse=True))
     print('Sorting keywords')
-    sorted_keywords = OrderedDict(sorted(filtered_keywords.items(), key=lambda filtered_keywords: filtered_keywords[1]))
-    print('Sorting retweets')
-    sorted_retweets = OrderedDict(sorted(retweets.items(), key=lambda retweets: retweets[1]))
+    sorted_keywords = OrderedDict(sorted(filtered_keywords.items(), key=lambda filtered_keywords: filtered_keywords[1], reverse=True))
 
     print('Popular Hashtags')
 
     for word in sorted_hashtags:
         try:
-            if hashtags[word] > POPULATION_THRESHOLD:
+            if hashtags[word] > POPULARITY_THRESHOLD:
                 print(word, " ", sorted_hashtags[word])
         except:
             print('Hashtag is unreadable')
@@ -125,8 +157,8 @@ def main():
 
     for user in sorted_users:
         try:
-            if users[user] > POPULATION_THRESHOLD:
-                print(user, " ", sorted_users[user])
+            if sorted_users[user].score > POPULARITY_THRESHOLD:
+                print(sorted_users[user].userName, " ", sorted_users[user].score)
         except:
             print('Username is unreadable')
 
@@ -134,18 +166,25 @@ def main():
 
     for word in sorted_keywords:
         try:
-            if keywords[word] > 1000:
+            if keywords[word] > KEYWORD_THRESHOLD:
                 print(word, " ", sorted_keywords[word])
         except:
             print('Keyword is unreadable')
 
     print('Popular Retweets')
+    i = 0
+    for twter in sorted_users:
+        if i<10:
+            i = i + 1
+            try:
+                print(sorted_users[twter].userName)
+            except:
+                print('Username is unreadable')
+            for twt in sorted_users[twter].tweets:
+                try:
+                    print('   ', twt.text)
+                except:
+                    print('Tweet is unreadable')
 
-    for tweet in sorted_retweets:
-        try:
-            if retweets[tweet] > 100:
-                print(tweet, " ", sorted_retweets[tweet])
-        except:
-            print('Tweet is unreadable')
 
 main()
