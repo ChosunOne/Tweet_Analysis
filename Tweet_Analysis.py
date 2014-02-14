@@ -18,7 +18,59 @@ class tweet:
         self.score = 0
         self.tweetId = 0
 
-def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, user_list):
+class event:
+    def __init__(self):
+        self.name = ''
+        self.id = 0
+        self.actors = []
+        self.awards = []
+        self.winners = []
+        self.nominees = []
+        self.reporters = []
+
+# WIP UNTIL NEXT COMMENT
+def eventReader(keyword_list, tweeter_list, userId_list):
+    awardEvent = event()
+    awardEvent.name = keyword_list.first
+# WIP COMPLETE
+
+def properNounExtractor(text_list, properNoun_list):
+
+    properNoun = False
+
+    for word in text_list:
+    
+        list = []
+        list.append(word)
+        tag = nltk.pos_tag(list)
+
+        if (tag[0][1] == 'NNP'):
+            properNoun = True
+        else:
+            if properNoun:
+                properNoun = False
+                properNoun_list.append('')
+
+        if properNoun:
+            properNoun_list.append(word)
+
+def properNounPhraser(properNoun_list):
+    phrased_list = []
+    index = 0
+    nounHolder = ''
+    for item in properNoun_list:
+        if item == '':
+            if nounHolder not in phrased_list:
+                phrased_list.append(nounHolder)
+            nounHolder = ''
+            index = index + 1
+        else:
+            nounHolder = nounHolder + ' ' + item
+            
+    return phrased_list
+
+
+def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, user_list, properNoun_list):
     twt = tweet()
     twt.text = json_object['text']
     twt.tweetId = json_object['id']
@@ -33,8 +85,10 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
     hashtag = False
     mention = False
     retweet = False
+    properNoun = False
 
     for word in text:
+       
 
         if hashtag and (word not in keyword_list):
             keyword_list[word] = 1
@@ -90,6 +144,7 @@ def main():
     words = {}
     tweeters = {}
     userIdTable = {}
+    properNouns = []
 
     POPULARITY_THRESHOLD = 100
     RETWEET_THRESHOLD = 100
@@ -117,7 +172,7 @@ def main():
     for item in json_data:
         progress = progress + 1
         try:
-            tweetParseLineObjects(item, hashtags, tweeters, words, userIdTable)
+            tweetParseLineObjects(item, hashtags, tweeters, words, userIdTable, properNouns)
         except:
             print(item['_id']['$oid'])
             print('An error occurred parsing this line')
@@ -136,7 +191,7 @@ def main():
     for keyword in keywords:
         if (keyword != 'RT') and (keyword != '#') and (keyword != '@') and (keyword != 'the') and (keyword != 'is'):
             filtered_keywords[keyword] = keywords[keyword]
-
+    
     print('Sorting hashtags')
     sorted_hashtags = OrderedDict(sorted(hashtags.items(), key=lambda hashtags: hashtags[1], reverse=True))
     print('Sorting users')
@@ -182,9 +237,12 @@ def main():
                 print('Username is unreadable')
             for twt in sorted_users[twter].tweets:
                 try:
+                    properNounExtractor(nltk.wordpunct_tokenize(twt.text), properNouns)
                     print('   ', twt.text)
                 except:
                     print('Tweet is unreadable')
+    properNounPhrases = properNounPhraser(properNouns)
+    print('Processing Complete')
 
 
 main()
