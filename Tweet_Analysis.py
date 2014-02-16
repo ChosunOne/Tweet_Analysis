@@ -30,15 +30,25 @@ class event:
 
 # WIP UNTIL NEXT COMMENT
 def eventReader(keyword_list, tweeter_list, userId_list):
+    """Creates an event that will be reported to the user"""
+
     awardEvent = event()
     awardEvent.name = keyword_list.first
 # WIP COMPLETE
 
-def properNounExtractor(text_list, properNoun_list):
-
+def properNounExtractor(text_dict):
+    """Takes a dictionary of words and then adds the proper nouns into a list"""
+    
+    print('Building Proper Noun List')
+    
+    properNoun_list = []
     properNoun = False
+    progress = 0
+    total = 0
 
-    for word in text_list:
+    total = len(text_dict.keys())
+
+    for word in text_dict.keys():
     
         list = []
         list.append(word)
@@ -49,28 +59,47 @@ def properNounExtractor(text_list, properNoun_list):
         else:
             if properNoun:
                 properNoun = False
-                properNoun_list.append('')
 
         if properNoun:
             properNoun_list.append(word)
 
-def properNounPhraser(properNoun_list):
-    phrased_list = []
-    index = 0
+        progress = progress + 1
+
+        if progress % 50 == 0:
+            print(progress, ' out of ', total, ' words processed.')
+
+    return properNoun_list
+
+def properNounMatcher(text_list, properNoun_list):
+    """Finds proper nouns in a list of strings and then outputs them to a list separated by '' elements"""
+
+    extracted_propers = []
+    proper = False
+
+    for word in text_list:
+        if word in properNoun_list:
+            extracted_propers.append(word)
+        else:
+            empty = ''
+            extracted_propers.append(empty)
+
+    return extracted_propers
+
+def properNounPhraser(text_list, properNoun_list, phrased_list):
+    """Updates a list of phrases of successive proper nouns from a list of strings"""
+    
     nounHolder = ''
-    for item in properNoun_list:
+    for item in text_list:
         if item == '':
             if nounHolder not in phrased_list:
                 phrased_list.append(nounHolder)
             nounHolder = ''
-            index = index + 1
         else:
             nounHolder = nounHolder + ' ' + item
-            
-    return phrased_list
 
+def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, user_list):
+    """Parses the tweet from the json_object and updates categories"""
 
-def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, user_list, properNoun_list):
     twt = tweet()
     twt.text = json_object['text']
     twt.tweetId = json_object['id']
@@ -89,7 +118,6 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
 
     for word in text:
        
-
         if hashtag and (word not in keyword_list):
             keyword_list[word] = 1
             hashtag = False
@@ -144,13 +172,18 @@ def main():
     words = {}
     tweeters = {}
     userIdTable = {}
+
     properNouns = []
+    properPhrases = []
 
     POPULARITY_THRESHOLD = 100
     RETWEET_THRESHOLD = 100
     KEYWORD_THRESHOLD = 10000
+
     json_file = 'goldenglobes.json'
+
     print('Loading ', json_file, '...')
+
     with open(json_file, 'r', encoding="utf8") as f:
         while True:
             line = f.readline()
@@ -172,7 +205,7 @@ def main():
     for item in json_data:
         progress = progress + 1
         try:
-            tweetParseLineObjects(item, hashtags, tweeters, words, userIdTable, properNouns)
+            tweetParseLineObjects(item, hashtags, tweeters, words, userIdTable)
         except:
             print(item['_id']['$oid'])
             print('An error occurred parsing this line')
@@ -198,6 +231,8 @@ def main():
     sorted_users = OrderedDict(sorted(tweeters.items(), key=lambda tweeters: tweeters[1].score, reverse=True))
     print('Sorting keywords')
     sorted_keywords = OrderedDict(sorted(filtered_keywords.items(), key=lambda filtered_keywords: filtered_keywords[1], reverse=True))
+
+    properNouns = properNounExtractor(words)
 
     print('Popular Hashtags')
 
@@ -229,7 +264,7 @@ def main():
     print('Popular Retweets')
     i = 0
     for twter in sorted_users:
-        if i<10:
+        if i<50:
             i = i + 1
             try:
                 print(sorted_users[twter].userName)
@@ -237,11 +272,12 @@ def main():
                 print('Username is unreadable')
             for twt in sorted_users[twter].tweets:
                 try:
-                    properNounExtractor(nltk.wordpunct_tokenize(twt.text), properNouns)
+                    protoPhrases = []
+                    protoPhrases = properNounMatcher(nltk.wordpunct_tokenize(twt.text), properNouns)
+                    properNounPhraser(protoPhrases, properNouns, properPhrases)
                     print('   ', twt.text)
                 except:
                     print('Tweet is unreadable')
-    properNounPhrases = properNounPhraser(properNouns)
     print('Processing Complete')
 
 
