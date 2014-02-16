@@ -3,6 +3,7 @@ import json
 import nltk
 import operator
 import itertools
+import re
 from collections import OrderedDict
 
 class tweeter:
@@ -67,7 +68,12 @@ def properNounExtractor(text_dict):
                 properNoun = False
 
         if properNoun:
-            properNoun_list.append(word)
+            #If the word contains multiple words, split them up
+            wordList = re.findall('[A-Z][^A-Z]*', word)
+
+            #If there was more than one word, then send each word to proper noun list separately
+            for x in range(0, len(wordList)):
+                properNoun_list.append(wordList[x])
 
         #Increment progress
         progress = progress + 1
@@ -264,7 +270,7 @@ def main():
     sorted_keywords = OrderedDict(sorted(filtered_keywords.items(), key=lambda filtered_keywords: filtered_keywords[1], reverse=True))
 
     #Extract the proper nouns from the word list
-    properNouns = properNounExtractor(words)
+    properNouns = properNounExtractor(keywords)
 
     #Print the most popular hashtags
     print('Popular Hashtags')
@@ -300,10 +306,11 @@ def main():
     print('Popular Retweets')
     i = 0
     for twter in sorted_users:
-        if i<50:
+        if i<1000:
             i = i + 1
             try:
-                print(sorted_users[twter].userName)
+                if i<10:
+                    print(sorted_users[twter].userName)
             except:
                 print('Username is unreadable')
             for twt in sorted_users[twter].tweets:
@@ -312,7 +319,9 @@ def main():
                     protoPhrases = []
                     protoPhrases = properNounMatcher(nltk.wordpunct_tokenize(twt.text), properNouns)
                     properNounPhraser(protoPhrases, properNouns, properPhrases)
-                    print('   ', twt.text)
+                    #Only print the top tweets
+                    if i<10:
+                        print('   ', twt.text)
                 except:
                     print('Tweet is unreadable')
 
