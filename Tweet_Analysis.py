@@ -1,5 +1,6 @@
 print('Loading application dependencies')
 import json
+import pickle
 import nltk
 import operator
 import itertools
@@ -29,13 +30,31 @@ class event:
         self.nominees = []
         self.reporters = []
 
-# WIP UNTIL NEXT COMMENT
-def eventReader(keyword_list, tweeter_list, userId_list):
+def createEvent(name, actor_list, award_list, top_tweeter_list):
     """Creates an event that will be reported to the user"""
 
-    awardEvent = event()
-    awardEvent.name = keyword_list.first
-# WIP COMPLETE
+    Event = event()
+    Event.name = name
+    Event.actors = actor_list
+    Event.awards = award_list
+    Event.reporters = top_tweeter_list
+
+    return Event
+
+def findAwards(proper_phrase_list):
+    award_list = []
+    for phrase in proper_phrase_list:
+        if 'Best' in phrase:
+            award_list.append(phrase)
+    return award_list
+
+def findActors(proper_phrase_list):
+    actor_list = []
+    for phrase in proper_phrase_list:
+        tokens = nltk.wordpunct_tokenize(phrase)
+        if len(tokens) == 2:
+            actor_list.append(phrase)
+    return actor_list
 
 def properNounExtractor(text_dict):
     """Takes a dictionary of words and then returns all the proper nouns in a list"""
@@ -79,7 +98,7 @@ def properNounExtractor(text_dict):
         progress = progress + 1
 
         #Display progress
-        if progress % 50 == 0:
+        if progress % 1000 == 0:
             print(progress, ' out of ', total, ' words processed.')
 
     return properNoun_list
@@ -204,6 +223,8 @@ def main():
     #Lists
     properNouns = []
     properPhrases = []
+    top_tweeters = []
+
 
     #Number Constants
     POPULARITY_THRESHOLD = 100
@@ -244,7 +265,7 @@ def main():
             print(item['_id']['$oid'])
             print('An error occurred parsing this line')
             print(item['created_at'])
-        if progress % 500 == 0:
+        if progress % 2000 == 0:
                 print(progress, ' tweets processed')
 
     #Pick out keywords from the word list using the hashtags
@@ -270,7 +291,7 @@ def main():
     sorted_keywords = OrderedDict(sorted(filtered_keywords.items(), key=lambda filtered_keywords: filtered_keywords[1], reverse=True))
 
     #Extract the proper nouns from the word list
-    properNouns = properNounExtractor(keywords)
+    properNouns = properNounExtractor(sorted_keywords)
 
     #Print the most popular hashtags
     print('Popular Hashtags')
@@ -306,7 +327,7 @@ def main():
     print('Popular Retweets')
     i = 0
     for twter in sorted_users:
-        if i<1000:
+        if i<5000:
             i = i + 1
             try:
                 if i<10:
@@ -324,9 +345,64 @@ def main():
                         print('   ', twt.text)
                 except:
                     print('Tweet is unreadable')
+            if i % 500 == 0:
+                print(i, ' out of 5000 tweeters processed')
+
+    print('Writing proper noun phrases to proper_phrases.txt')
+
+    with open('proper_phrases.txt', 'w') as output:
+        for phrase in properPhrases:
+    	    try:
+    		    output.write(phrase)
+    		    output.write('\r')
+    	    except:
+    		    output.write('Error writing proper noun phrase to file \r')
+
+    print('Finding Awards')
+
+    awards_list = []
+    awards_list = findAwards(properPhrases)
+
+    print('Writing discovered awards to awards.txt')
+
+    with open('awards.txt', 'w') as output:
+        for award in awards_list:
+            try:
+                output.write(award)
+                output.write('\r')
+            except:
+                output.write('Error writing award to file \r')
+
+    print('Finding Actors')
+
+    actors_list = []
+    actors_list = findActors(properPhrases)
+
+    print('Writing discovered actors to actors.txt')
+
+    with open('actors.txt', 'w') as output:
+        for actor in actors_list:
+            try:
+                output.write(actor)
+                output.write('\r')
+            except:
+                output.write('Error writing actor to file \r')
+
+    for twter in tweeters.values():
+        if twter.score > POPULARITY_THRESHOLD:
+            top_tweeters.append(twter)
+
+    awardEvent = createEvent('Golden Globes', actors_list, awards_list, top_tweeters)
+
+    print('Writing Event to event.txt')
+
+    with open('event.txt', 'wb') as output:
+        pickle.dump(awardEvent, output)
 
     #Program is complete
     print('Processing Complete')
+
+    return awardEvent
 
 
 main()
