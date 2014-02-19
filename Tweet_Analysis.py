@@ -182,6 +182,7 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
 
                 mention = False
                 retweet = False
+                recent = False
 
                 #If the user mentioned is not in the user list, create a ghost of the user
                 if (word not in user_list.keys()) and (word not in ghost_list.keys()):
@@ -198,9 +199,11 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
                     ghosted_twter.tweets.append(ghosted_twt)
 
                     ghost_list[word] = ghosted_twter
+                    
+                    recent = True
 
                 #Check to see if the retweet belongs to a ghost
-                if word in ghost_list:
+                if (word in ghost_list) and not recent:
                     exists = False
 
                     ghost = ghost_list[word]
@@ -219,7 +222,7 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
                     ghost.score = ghost.score + 1
 
                 #Otherwise, increase the original tweeter's and tweet's score
-                else:
+                if (not recent) and (word in user_list.keys()):
                     id = user_list[word]
                     mentioned = tweeter_list[id]
 
@@ -423,11 +426,11 @@ def main():
 
     with open('proper_phrases.txt', 'w') as output:
         for phrase in properPhrases:
-    	    try:
-    		    output.write(phrase)
-    		    output.write('\r')
-    	    except:
-    		    output.write('Error writing proper noun phrase to file \r')
+            try:
+                output.write(phrase)
+                output.write('\r')
+            except:
+                output.write('Error writing proper noun phrase to file \r')
 
     print('Finding Awards')
 
@@ -477,9 +480,12 @@ def main():
             output.write(g.userName)
             output.write('\r')
             for t in g.tweets:
-                output.write('    ')
-                output.write(t.text)
-                output.write('\r')
+                try:
+                    output.write('    ')
+                    output.write(t.text)
+                    output.write('\r')
+                except:
+                    output.write('Error writing tweet to file\r')
 
     #Program is complete
     print('Processing Complete')
