@@ -39,7 +39,7 @@ def keywordCheck(string):
     else:
         return False
 
-def createEvent(name, actor_list, award_list, top_tweeter_list):
+def createEvent(name, actor_list, award_list, top_tweeter_list, word_list, keyword_list, hashtag_list):
     """Creates an event that will be reported to the user"""
 
     Event = event()
@@ -47,6 +47,9 @@ def createEvent(name, actor_list, award_list, top_tweeter_list):
     Event.actors = actor_list
     Event.awards = award_list
     Event.reporters = top_tweeter_list
+    Event.words_dict = word_list
+    Event.tags = hashtag_list
+    Event.tagwords = keyword_list
 
     return Event
 
@@ -466,7 +469,7 @@ def main():
         if twter.score > POPULARITY_THRESHOLD:
             top_tweeters.append(twter)
 
-    awardEvent = createEvent('Golden Globes', actors_list, awards_list, top_tweeters)
+    awardEvent = createEvent('Golden Globes', actors_list, awards_list, top_tweeters, words, keywords, hashtags)
 
     print('Writing Event to event.txt')
 
