@@ -30,6 +30,36 @@ class event:
         self.nominees = []
         self.reporters = []
 
+def keywordCheck(string):
+    """Check to see if the word is not a symbol or short word"""
+    if ((string != 'RT') 
+    and (string != '#') 
+    and (string != '@') 
+    and (string != 'the') 
+    and (string != 'is') 
+    and (string != 'I') 
+    and (string != 't')
+    and (string != '"')
+    and (string != 's')
+    and (string != 'and')
+    and (string != 'in')
+    and (string != 'at')
+    and (string != 'http')
+    and (string != 'it')
+    and (string != 'me')
+    and (string != 'this')
+    and (string != 'my')
+    and (string != 'The')
+    and (string != 'for')
+    and (string != 'like')
+    and (string != 'not')
+    and (string != 'she')
+    and (string != 'an')
+    and (string != 'he')):
+        return True
+    else:
+        return False
+
 def createEvent(name, actor_list, award_list, top_tweeter_list):
     """Creates an event that will be reported to the user"""
 
@@ -134,7 +164,7 @@ def properNounPhraser(text_list, properNoun_list, phrased_list):
         else:
             nounHolder = nounHolder + ' ' + item
 
-def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, user_list):
+def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, user_list, ghost_list):
     """Parses the tweet from the json_object and updates categories"""
 
     #Create the tweet object
@@ -174,8 +204,33 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
                 mention = False
                 retweet = False
 
-                if word not in user_list:
-                    pass
+                #If the user mentioned is not in the user list, create a ghost of the user
+                if word not in user_list.keys():
+                    ghosted_twter = tweeter()
+                    ghosted_twter.userName = word
+                    ghosted_twter.score = 1
+                    ghosted_twter.userId = -1
+
+                    ghosted_twt = tweet()
+                    ghosted_twt.text = twt.text
+                    ghosted_twt.score = 1
+                    ghosted_twt.tweetId = -1
+
+                    ghosted_twter.tweets.append(ghosted_twt)
+
+                    ghost_list[word] = ghosted_twter
+
+                #Check to see if the retweet belongs to a ghost
+                if word in ghost_list:
+                    ghost = ghost_list[word]
+
+                    for t in ghost.tweets:
+                        if t in text:
+                            t.score = t.score + 1
+
+                    ghost.score = ghost.score + 1
+
+                #Otherwise, increase the original tweeter's and tweet's score
                 else:
                     id = user_list[word]
                     mentioned = tweeter_list[id]
@@ -201,6 +256,21 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
             freq = word_list[word]
             word_list[word] = freq + 1
 
+    #Check to see if tweeter has a ghost
+    if twter.userName in ghost_list.keys():
+
+        #Copy the information from the ghost to the tweeter
+        ghost = ghost_list[twter.userName]
+
+        for t in ghost.tweets:
+            twter.tweets.append(t)
+
+        twter.score = twter.score + ghost.score
+        try:
+            del ghost_list[word]
+        except KeyError:
+            pass
+
     #Add tweeter to the master tweeter list
     if twter.userId not in tweeter_list:
         tweeter_list[twter.userId] = twter
@@ -218,6 +288,7 @@ def main():
     keywords = {}
     words = {}
     tweeters = {}
+    ghosted_tweeters = {}
     userIdTable = {}
 
     #Lists
@@ -260,7 +331,7 @@ def main():
     for item in json_data:
         progress = progress + 1
         try:
-            tweetParseLineObjects(item, hashtags, tweeters, words, userIdTable)
+            tweetParseLineObjects(item, hashtags, tweeters, words, userIdTable, ghosted_tweeters)
         except:
             print(item['_id']['$oid'])
             print('An error occurred parsing this line')
@@ -279,7 +350,7 @@ def main():
     print('Filtering Keywords')
     filtered_keywords = {}
     for keyword in keywords:
-        if (keyword != 'RT') and (keyword != '#') and (keyword != '@') and (keyword != 'the') and (keyword != 'is'):
+        if keywordCheck(keyword):
             filtered_keywords[keyword] = keywords[keyword]
     
     #Sort the dictionaries to display the most popular items
@@ -293,58 +364,70 @@ def main():
     #Extract the proper nouns from the word list
     properNouns = properNounExtractor(sorted_keywords)
 
-    #Print the most popular hashtags
-    print('Popular Hashtags')
+    #Write the most popular hashtags to file
+    print('Writing popular hashtags to hashtags.txt')
 
-    for word in sorted_hashtags:
-        try:
-            if hashtags[word] > POPULARITY_THRESHOLD:
-                print(word, " ", sorted_hashtags[word])
-        except:
-            print('Hashtag is unreadable')
-
-    #Print the most popular users
-    print('Popular Users')
-
-    for user in sorted_users:
-        try:
-            if sorted_users[user].score > POPULARITY_THRESHOLD:
-                print(sorted_users[user].userName, " ", sorted_users[user].score)
-        except:
-            print('Username is unreadable')
+    with open('hashtags.txt', 'w') as output:
+        for word in sorted_hashtags:
+            try:
+                output.write(word)
+                output.write('\r')
+            except:
+                output.write('Error writing hashtag to file \r')
 
     #Print the most popular users
-    print('Popular Keywords')
+    print('Writing users to users.txt')
 
-    for word in sorted_keywords:
-        try:
-            if keywords[word] > KEYWORD_THRESHOLD:
-                print(word, " ", sorted_keywords[word])
-        except:
-            print('Keyword is unreadable')
+    with open('users.txt', 'w') as output:
+        for user in sorted_users:
+            try:
+                output.write(sorted_users[user].userName)
+                output.write(' ')
+                output.write(str(sorted_users[user].score))
+                output.write('\r')
+            except:
+                output.write('Error writing user to file\r')
+
+    #Print the most popular users
+    print('Writing keywords to keywords.txt')
+
+    with open('keywords.txt', 'w') as output:
+        for word in sorted_keywords.keys():
+            try:
+                output.write(word)
+                output.write(' ')
+                output.write(str(keywords[word]))
+                output.write('\r')
+            except:
+                output.write('Error writing keyword to file\r')
 
     #Print the most popular tweets
-    print('Popular Retweets')
+    print('Writing retweets to retweets.txt')
     i = 0
-    for twter in sorted_users:
-        if i<5000:
-            i = i + 1
-            try:
-                if i<10:
-                    print(sorted_users[twter].userName)
-            except:
-                print('Username is unreadable')
-            for twt in sorted_users[twter].tweets:
+
+    with open('retweets.txt', 'w') as output:
+        for twter in sorted_users:
+            if i<5000:
+                i = i + 1
                 try:
-                    #Find the proper noun phrases
-                    protoPhrases = []
-                    protoPhrases = properNounMatcher(nltk.wordpunct_tokenize(twt.text), properNouns)
-                    properNounPhraser(protoPhrases, properNouns, properPhrases)
-                    #Only print the top tweets
-                    if i<10:
-                        print('   ', twt.text)
+                    if i<20:
+                        output.write(sorted_users[twter].userName)
+                        output.write('\r')
                 except:
-                    print('Tweet is unreadable')
+                    print('Username is unreadable')
+                for twt in sorted_users[twter].tweets:
+                    try:
+                        #Find the proper noun phrases
+                        protoPhrases = []
+                        protoPhrases = properNounMatcher(nltk.wordpunct_tokenize(twt.text), properNouns)
+                        properNounPhraser(protoPhrases, properNouns, properPhrases)
+                        #Only print the top tweets
+                        if i<20:
+                            output.write('   ')
+                            output.write(twt.text)
+                            output.write('\r')
+                    except:
+                        output.write('Error writing tweet to file\r')
             if i % 500 == 0:
                 print(i, ' out of 5000 tweeters processed')
 
