@@ -74,15 +74,6 @@ def extractProperNouns(tokenizedText):
 
 
 	return properNouns
-'''
-def addOrIncrement(dictionary, key):
-	if key in dictionary.keys():
-		dictionary[key] += 1
-	else:
-		dictionary[key] = 1
-
-	return dictionary'''
-
 
 def findHosts(text, possibleHosts):
 	if findHostTweets(text):
@@ -118,7 +109,7 @@ def findAwardWinners(text, awardCategories, categoryMentionCount, possibleWinner
 			else:
 				possibleWinners[categoryMentioned] = possibleWinners[categoryMentioned] + properNouns
 	return possibleWinners'''
-
+'''
 def printResults(hosts, possibleWinners):
 	counter = collections.Counter(hosts)
 	hosts = counter.most_common()[0:2]
@@ -131,7 +122,7 @@ def printResults(hosts, possibleWinners):
 		print(category, "\n=============\n ", possibleWinners[category])
 
 	print("\n")
-
+'''
 def sanitizeTweet(text):
 	# remove rewteet
 	cleanTweet = re.sub("RT ", "", text)
@@ -221,10 +212,9 @@ def findWinners(tweeter):#(tweeter)
 				printAward = sanitizeAwardName(award.group())
 
 			print(cleanText, "\n",findSimilarCategory(printAward), " - ", properNouns, "\n")
-
+'''
 def findWinners(tweeters, categories):
 	awardResult = {}
-	NUMBER_OF_TWEETER = 40
 	awardPat = re.compile("best .*",re.IGNORECASE)
 	winnerPat = re.compile(".*win.*",re.IGNORECASE)
 	for twtr in tweeters:
@@ -238,9 +228,6 @@ def findWinners(tweeters, categories):
 					award = sanitizeAwardName(award.group())
 					mostSimilarAward = findSimilarCategory(award)
 					awardResult[mostSimilarAward] = properNouns
-		NUMBER_OF_TWEETER = NUMBER_OF_TWEETER - 1
-		if NUMBER_OF_TWEETER<0:
-			break;
 	return awardResult
 
 def findSimilarCategory(text):
