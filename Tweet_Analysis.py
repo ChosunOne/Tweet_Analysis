@@ -39,7 +39,7 @@ def keywordCheck(string):
     else:
         return False
 
-def createEvent(name, actor_list, award_list, top_tweeter_list):
+def createEvent(name, actor_list, award_list, top_tweeter_list, word_list, keyword_list, hashtag_list):
     """Creates an event that will be reported to the user"""
 
     Event = event()
@@ -47,6 +47,9 @@ def createEvent(name, actor_list, award_list, top_tweeter_list):
     Event.actors = actor_list
     Event.awards = award_list
     Event.reporters = top_tweeter_list
+    Event.words_dict = word_list
+    Event.tags = hashtag_list
+    Event.tagwords = keyword_list
 
     return Event
 
@@ -165,6 +168,7 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
     mention = False
     retweet = False
     properNoun = False
+    recent = False
 
     #Look through each word to categorize it
     for word in text:
@@ -176,6 +180,8 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
             votes = keyword_list[word]
             keyword_list[word] = votes + 1
             hashtag = False
+            
+            
 
         #Find the original tweet and increase its score. Also find the user and increase his score.
         if retweet and mention:
@@ -185,6 +191,7 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
 
                 #If the user mentioned is not in the user list, create a ghost of the user
                 if (word not in user_list.keys()) and (word not in ghost_list.keys()):
+
                     ghosted_twter = tweeter()
                     ghosted_twter.userName = word
                     ghosted_twter.score = 1
@@ -198,9 +205,11 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
                     ghosted_twter.tweets.append(ghosted_twt)
 
                     ghost_list[word] = ghosted_twter
+                    
+                    recent = True
 
                 #Check to see if the retweet belongs to a ghost
-                if word in ghost_list:
+                if (word in ghost_list) and not recent:
                     exists = False
 
                     ghost = ghost_list[word]
@@ -219,13 +228,20 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
                     ghost.score = ghost.score + 1
 
                 #Otherwise, increase the original tweeter's and tweet's score
-                else:
+                if (not recent) and (word in user_list.keys()):
                     id = user_list[word]
                     mentioned = tweeter_list[id]
+                    found = False
 
                     for t in mentioned.tweets:
-                        if t in text:
+                        if t.text in twt.text:
+                            found = True
                             t.score = t.score + 1
+
+                    if not found:
+                        newTweet = tweet()
+                        newTweet.text = twt.text
+                        mentioned.tweets.append(newTweet)
 
                     mentioned.score = mentioned.score + 1
 
@@ -245,7 +261,8 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
             word_list[word] = freq + 1
 
     #Check to see if tweeter has a ghost
-    if twter.userName in ghost_list.keys():
+    if twter.userName in ghost_list.keys() and not recent:
+        
 
         #Copy the information from the ghost to the tweeter
         ghost = ghost_list[twter.userName]
@@ -255,7 +272,7 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
 
         twter.score = twter.score + ghost.score
         try:
-            del ghost_list[word]
+            del ghost_list[twter.userName]
         except KeyError:
             pass
 
@@ -346,6 +363,8 @@ def main():
     sorted_hashtags = OrderedDict(sorted(hashtags.items(), key=lambda hashtags: hashtags[1], reverse=True))
     print('Sorting users')
     sorted_users = OrderedDict(sorted(tweeters.items(), key=lambda tweeters: tweeters[1].score, reverse=True))
+    print('Sorting ghosts')
+    sorted_ghosts = OrderedDict(sorted(ghosted_tweeters.items(), key=lambda ghosted_tweeters: ghosted_tweeters[1].score, reverse=True))
     print('Sorting keywords')
     sorted_keywords = OrderedDict(sorted(filtered_keywords.items(), key=lambda filtered_keywords: filtered_keywords[1], reverse=True))
 
@@ -394,40 +413,45 @@ def main():
     i = 0
 
     with open('retweets.txt', 'w') as output:
-        for twter in sorted_users:
+        for twter in sorted_users.values():
+
+            #Find golden globes (DEBUG)
+            if twter.userName == 'goldenglobes':
+                pass
+
+            i = i + 1
             if i<2500:
-                i = i + 1
                 try:
                     if i<20:
-                        output.write(sorted_users[twter].userName)
+                        output.write(twter.userName)
                         output.write('\r')
                 except:
                     print('Username is unreadable')
-                for twt in sorted_users[twter].tweets:
+                for twt in twter.tweets:
                     try:
                         #Find the proper noun phrases
                         protoPhrases = []
                         protoPhrases = properNounMatcher(nltk.wordpunct_tokenize(twt.text), properNouns)
                         properNounPhraser(protoPhrases, properNouns, properPhrases)
-                        #Only print the top tweets
+                        #Only write the top tweets
                         if i<20:
                             output.write('   ')
                             output.write(twt.text)
                             output.write('\r')
                     except:
                         output.write('Error writing tweet to file\r')
-            if i % 500 == 0:
+            if (i % 500 == 0) and (i <= 2500):
                 print(i, ' out of 2500 tweeters processed')
 
     print('Writing proper noun phrases to proper_phrases.txt')
 
     with open('proper_phrases.txt', 'w') as output:
         for phrase in properPhrases:
-    	    try:
-    		    output.write(phrase)
-    		    output.write('\r')
-    	    except:
-    		    output.write('Error writing proper noun phrase to file \r')
+            try:
+                output.write(phrase)
+                output.write('\r')
+            except:
+                output.write('Error writing proper noun phrase to file \r')
 
     print('Finding Awards')
 
@@ -463,7 +487,7 @@ def main():
         if twter.score > POPULARITY_THRESHOLD:
             top_tweeters.append(twter)
 
-    awardEvent = createEvent('Golden Globes', actors_list, awards_list, top_tweeters)
+    awardEvent = createEvent('Golden Globes', actors_list, awards_list, top_tweeters, words, keywords, hashtags)
 
     print('Writing Event to event.txt')
 
@@ -473,13 +497,19 @@ def main():
     print('Writing Ghost tweets to ghosts.txt')
 
     with open('ghosts.txt', 'w') as output:
-        for g in ghosted_tweeters.values():
-            output.write(g.userName)
-            output.write('\r')
-            for t in g.tweets:
-                output.write('    ')
-                output.write(t.text)
+        for g in sorted_ghosts.values():
+            try:
+                output.write(g.userName)
                 output.write('\r')
+            except:
+                output.write('Error writing username to file\r')
+            for t in g.tweets:
+                try:
+                    output.write('    ')
+                    output.write(t.text)
+                    output.write('\r')
+                except:
+                    output.write('Error writing tweet to file\r')
 
     #Program is complete
     print('Processing Complete')

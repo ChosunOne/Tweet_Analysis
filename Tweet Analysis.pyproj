@@ -22,6 +22,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="gg.py" />
+    <Compile Include="TweetLibrary.py" />
     <Compile Include="Tweet_Analysis.py" />
   </ItemGroup>
   <ItemGroup>

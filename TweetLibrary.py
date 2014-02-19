@@ -15,8 +15,11 @@ class event:
     def __init__(self):
         self.name = ''
         self.id = 0
-        self.actors = []
-        self.awards = []
-        self.winners = []
-        self.nominees = []
-        self.reporters = []
+        self.actors = []        #Actors list
+        self.awards = []        #Awards list
+        self.winners = []       #Winners list
+        self.nominees = []      #Nominees list
+        self.reporters = []     #Top Tweeters list
+        self.tags = {}          #Hashtag dict
+        self.tagwords = {}      #Keyword dict
+        self.words_dict = {}    #Words dict
