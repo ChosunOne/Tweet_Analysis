@@ -5,6 +5,7 @@ import operator
 import re
 import collections, difflib
 import pickle
+form TweetLibrary import *
 
 gg = ['Golden Globes', 'GoldenGlobes', 'golden globes']
 awardNameStopList = ['at', 'the', 'for']
@@ -128,11 +129,8 @@ def findAwardWinners(text, awardCategories, categoryMentionCount, possibleWinner
 			if categoryMentioned not in possibleWinners.keys():
 				possibleWinners[categoryMentioned] = properNouns 
 			else:
-				possibleWinners[categoryMentioned] = possibleWinners[categoryMentioned] + properNouns '''
-
-
-
-	return possibleWinners
+				possibleWinners[categoryMentioned] = possibleWinners[categoryMentioned] + properNouns
+	return possibleWinners'''
 
 def printResults(hosts, possibleWinners):
 	counter = collections.Counter(hosts)
@@ -203,8 +201,8 @@ def findWinners(tweeters, categories):
 	for twtr in tweeters:
 		tweets = twtr.tweets
 		for tweet in tweets:
-			if winnerPat.match(tweet):
-				cleanTweet = sanitizeTweet(tweet)
+			if winnerPat.match(tweet.text):
+				cleanTweet = sanitizeTweet(tweet.text)
 				properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanTweet))
 				award = awardPat.search(cleanTweet)
 				if award:
@@ -268,6 +266,6 @@ def main():
 
 	awardResult = {}#  key is the name of the award, value is the actual winner of the award
 	tweeters = eventObject.reporters
-	awardResult = findWinner(tweeters,awardCategories)
-	
+	awardResult = findWinners(tweeters,awardCategories)
+	print awardResult
 main()
