@@ -195,10 +195,11 @@ def findWinners(tweeter):#(tweeter)
 
 def findWinners(tweeters, categories):
 	awardResult = {}
-	NUMBER_OF_TWEETER = 20
-	awardPat = re.compile("best . *",re.IGNORECASE)
-	winnerPat = re.compile(".*win .*",re.IGNORECASE)
+	NUMBER_OF_TWEETER = 40
+	awardPat = re.compile("best .*",re.IGNORECASE)
+	winnerPat = re.compile(".*win.*",re.IGNORECASE)
 	for twtr in tweeters:
+		print (twtr.userName)
 		tweets = twtr.tweets
 		for tweet in tweets:
 			if winnerPat.match(tweet.text):
@@ -206,7 +207,9 @@ def findWinners(tweeters, categories):
 				properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanTweet))
 				award = awardPat.search(cleanTweet)
 				if award:
+					print("dirty:",award.group())
 					award = sanitizeAwardName(award.group())
+					print("clean:",award)
 					awardResult[award] = properNouns
 		NUMBER_OF_TWEETER = NUMBER_OF_TWEETER - 1
 		if NUMBER_OF_TWEETER<0:
@@ -267,5 +270,5 @@ def main():
 	awardResult = {}#  key is the name of the award, value is the actual winner of the award
 	tweeters = eventObject.reporters
 	awardResult = findWinners(tweeters,awardCategories)
-	print awardResult
+	print (awardResult)
 main()
