@@ -5,30 +5,9 @@ import nltk
 import operator
 import itertools
 import re
+from TweetLibrary import *
 from collections import OrderedDict
 
-class tweeter:
-    def __init__(self):
-        self.score = 0
-        self.tweets = []
-        self.userName = ''
-        self.userId = 0
-
-class tweet:
-    def __init__(self):
-        self.text = ''
-        self.score = 0
-        self.tweetId = 0
-
-class event:
-    def __init__(self):
-        self.name = ''
-        self.id = 0
-        self.actors = []
-        self.awards = []
-        self.winners = []
-        self.nominees = []
-        self.reporters = []
 
 def keywordCheck(string):
     """Check to see if the word is not a symbol or short word"""
@@ -205,7 +184,7 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
                 retweet = False
 
                 #If the user mentioned is not in the user list, create a ghost of the user
-                if word not in user_list.keys() and word not in ghost_list:
+                if (word not in user_list.keys()) and (word not in ghost_list.keys()):
                     ghosted_twter = tweeter()
                     ghosted_twter.userName = word
                     ghosted_twter.score = 1
@@ -222,17 +201,20 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
 
                 #Check to see if the retweet belongs to a ghost
                 if word in ghost_list:
+                    exists = False
+
                     ghost = ghost_list[word]
 
                     ghosted_twt = tweet()
                     ghosted_twt.text = twt.text
 
-                    if ghosted_twt not in ghost.tweets:
+                    for gt in ghost.tweets:
+                        if ghosted_twt.text == gt.text:
+                            exists = True
+                            gt.score = gt.score + 1
+                            
+                    if exists != True:
                         ghost.tweets.append(ghosted_twt)
-
-                    for t in ghost.tweets:
-                        if t in text:
-                            t.score = t.score + 1
 
                     ghost.score = ghost.score + 1
 
@@ -413,7 +395,7 @@ def main():
 
     with open('retweets.txt', 'w') as output:
         for twter in sorted_users:
-            if i<5000:
+            if i<2500:
                 i = i + 1
                 try:
                     if i<20:
@@ -435,7 +417,7 @@ def main():
                     except:
                         output.write('Error writing tweet to file\r')
             if i % 500 == 0:
-                print(i, ' out of 5000 tweeters processed')
+                print(i, ' out of 2500 tweeters processed')
 
     print('Writing proper noun phrases to proper_phrases.txt')
 
@@ -487,6 +469,17 @@ def main():
 
     with open('event.txt', 'wb') as output:
         pickle.dump(awardEvent, output)
+
+    print('Writing Ghost tweets to ghosts.txt')
+
+    with open('ghosts.txt', 'w') as output:
+        for g in ghosted_tweeters.values():
+            output.write(g.userName)
+            output.write('\r')
+            for t in g.tweets:
+                output.write('    ')
+                output.write(t.text)
+                output.write('\r')
 
     #Program is complete
     print('Processing Complete')
