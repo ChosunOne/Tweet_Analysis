@@ -398,8 +398,8 @@ def main():
 
     with open('retweets.txt', 'w') as output:
         for twter in sorted_users:
+            i = i + 1
             if i<2500:
-                i = i + 1
                 try:
                     if i<20:
                         output.write(sorted_users[twter].userName)
@@ -419,7 +419,7 @@ def main():
                             output.write('\r')
                     except:
                         output.write('Error writing tweet to file\r')
-            if i % 500 == 0:
+            if (i % 500 == 0) and (i <= 2500):
                 print(i, ' out of 2500 tweeters processed')
 
     print('Writing proper noun phrases to proper_phrases.txt')
@@ -477,8 +477,11 @@ def main():
 
     with open('ghosts.txt', 'w') as output:
         for g in ghosted_tweeters.values():
-            output.write(g.userName)
-            output.write('\r')
+            try:
+                output.write(g.userName)
+                output.write('\r')
+            except:
+                output.write('Error writing username to file\r')
             for t in g.tweets:
                 try:
                     output.write('    ')
