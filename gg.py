@@ -5,7 +5,7 @@ import operator
 import re
 import collections, difflib
 import pickle
-form TweetLibrary import *
+from TweetLibrary import *
 
 gg = ['Golden Globes', 'GoldenGlobes', 'golden globes']
 awardNameStopList = ['at', 'the', 'for']
