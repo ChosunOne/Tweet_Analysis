@@ -40,16 +40,6 @@ def findHostTweets(text):
 
 	return hostMentioned
 
-'''
-def findWinnerTweets(text, categories):
-	categoryMentioned = None
-	for category in categories:
-		pattern = re.compile(".*%s.*" % category, re.IGNORECASE)
-		if pattern.match(text):
-			categoryMentioned = category
-			break
-
-	return categoryMentioned'''
 
 
 def extractProperNouns(tokenizedText):
@@ -84,45 +74,6 @@ def findHosts(text, possibleHosts):
 
 	return possibleHosts
 
-'''
-def findAwardWinners(text, awardCategories, categoryMentionCount, possibleWinners):
-	# ignore retweets
-	RTPattern = re.compile("RT.*")
-	if not RTPattern.match(text):
-
-		categoryMentioned = findWinnerTweets(text, awardCategories)
-
-		if categoryMentioned:
-			categoryMentionCount = addOrIncrement(categoryMentionCount, categoryMentioned)
-			if categoryMentionCount[categoryMentioned] > 15:
-				awardCategories.remove(categoryMentioned)
-
-			# Remove award name from text
-			p = re.compile(re.escape(categoryMentioned), re.IGNORECASE)
-			text = p.sub('', text)
-
-			tokenizedText = nltk.wordpunct_tokenize(text)
-			properNouns = extractProperNouns(tokenizedText)
-
-			if categoryMentioned not in possibleWinners.keys():
-				possibleWinners[categoryMentioned] = properNouns 
-			else:
-				possibleWinners[categoryMentioned] = possibleWinners[categoryMentioned] + properNouns
-	return possibleWinners'''
-'''
-def printResults(hosts, possibleWinners):
-	counter = collections.Counter(hosts)
-	hosts = counter.most_common()[0:2]
-	print("HOST(S)\n=============\n ", hosts)
-	print("\n")
-	
-	for category in possibleWinners:
-		counter = collections.Counter(possibleWinners[category])
-		possibleWinners[category] = counter.most_common()[0:2]
-		print(category, "\n=============\n ", possibleWinners[category])
-
-	print("\n")
-'''
 def sanitizeTweet(text):
 	# remove rewteet
 	cleanTweet = re.sub("RT ", "", text)
@@ -193,26 +144,6 @@ def findPresenterTweets(tweets):
 	print(data.most_common())
 
 
-def findWinners(tweeter):#(tweeter)
-	text = tweet['text']
-	sourcePat = re.compile(".*@goldenglobes.*", re.IGNORECASE)
-	awardPat = re.compile("best .*", re.IGNORECASE)
-
-	if sourcePat.match(text):	
-		pat = re.compile(".* wins .*", re.IGNORECASE)
-		# pat = re.compile(".* win.*", re.IGNORECASE)
-
-		if pat.match(text):
-			# sanitize
-			cleanText = sanitizeTweet(text)
-			properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanText))
-			award = awardPat.search(cleanText)
-			printAward = ""
-			if award:
-				printAward = sanitizeAwardName(award.group())
-
-			print(cleanText, "\n",findSimilarCategory(printAward), " - ", properNouns, "\n")
-'''
 def findWinners(tweeters, categories):
 	awardResult = {}
 	awardPat = re.compile("best .*",re.IGNORECASE)
@@ -239,39 +170,6 @@ def findSimilarCategory(text):
 	mostSimilar = max(similarities.items(), key=operator.itemgetter(1))[0]
 
 	return mostSimilar
-
-'''
-def main ():
-	jsonFile = 'goldenglobes.json'
-	tweets = loadJSONFromFile(jsonFile)
-	awardCategories = getCategoriesFromFile('Categories.txt')
-
-	hostCount = 0
-	possibleHosts = []
-
-	categoryMentionCount = {}
-	possibleWinners = {}
-
-	findSimilarCategory("best drama")
-
-	for tweet in tweets:
-		text = tweet['text']
-
-		findWinners(tweet)
-		# Find Winners
-		# possibleWinners = findAwardWinners(text, awardCategories, categoryMentionCount, possibleWinners)			
-
-		# Find Hosts
-		# hosts = findHosts(text, possibleHosts)
-
-		# Find Presenters
-		# presenters = findPresenterTweets(text, awardCategories)
-		# if presenters:
-		# 	print(text)
-
-	# PRINT RESULTS
-	# printResults(hosts, possibleWinners)
-	'''
 
 def main():
 	jsonFile = 'goldenglobes.json'
