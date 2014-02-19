@@ -4,6 +4,7 @@ from nltk.tag import pos_tag
 import operator
 import re
 import collections, difflib
+import pickle
 
 gg = ['Golden Globes', 'GoldenGlobes', 'golden globes']
 awardNameStopList = ['at', 'the', 'for']
@@ -23,6 +24,10 @@ def getCategoriesFromFile(filePath):
 
 	return awardCategories
 
+def getEventObject(filePath):
+	eventObject = pickle.load( open( "event.txt", "rb" ) )
+	return eventObject
+
 
 def findHostTweets(text):
 	pattern = re.compile(".* hosting .* Golden Globes .*", re.IGNORECASE)
@@ -34,7 +39,7 @@ def findHostTweets(text):
 
 	return hostMentioned
 
-
+'''
 def findWinnerTweets(text, categories):
 	categoryMentioned = None
 	for category in categories:
@@ -43,7 +48,7 @@ def findWinnerTweets(text, categories):
 			categoryMentioned = category
 			break
 
-	return categoryMentioned
+	return categoryMentioned'''
 
 
 def findPresenterTweets(text, categories):
@@ -81,14 +86,14 @@ def extractProperNouns(tokenizedText):
 
 
 	return properNouns
-
+'''
 def addOrIncrement(dictionary, key):
 	if key in dictionary.keys():
 		dictionary[key] += 1
 	else:
 		dictionary[key] = 1
 
-	return dictionary
+	return dictionary'''
 
 
 def findHosts(text, possibleHosts):
@@ -100,7 +105,7 @@ def findHosts(text, possibleHosts):
 
 	return possibleHosts
 
-
+'''
 def findAwardWinners(text, awardCategories, categoryMentionCount, possibleWinners):
 	# ignore retweets
 	RTPattern = re.compile("RT.*")
@@ -123,7 +128,7 @@ def findAwardWinners(text, awardCategories, categoryMentionCount, possibleWinner
 			if categoryMentioned not in possibleWinners.keys():
 				possibleWinners[categoryMentioned] = properNouns 
 			else:
-				possibleWinners[categoryMentioned] = possibleWinners[categoryMentioned] + properNouns 
+				possibleWinners[categoryMentioned] = possibleWinners[categoryMentioned] + properNouns '''
 
 
 
@@ -170,9 +175,9 @@ def sanitizeAwardName(text):
 
 	return cleanAward
 
-def findWinners(tweet):
+def findWinners(tweeter):#(tweeter)
 	text = tweet['text']
-	sourcePat = re.compile(".*@huffingtonpost.*", re.IGNORECASE)
+	sourcePat = re.compile(".*@goldenglobes.*", re.IGNORECASE)
 	awardPat = re.compile("best .*", re.IGNORECASE)
 
 	if sourcePat.match(text):	
@@ -190,6 +195,25 @@ def findWinners(tweet):
 
 			print(cleanText, "\n",findSimilarCategory(printAward), " - ", properNouns, "\n")
 
+def findWinners(tweeters, categories):
+	awardResult = {}
+	NUMBER_OF_TWEETER = 20
+	awardPat = re.compile("best . *",re.IGNORECASE)
+	winnerPat = re.compile(".*win .*",re.IGNORECASE)
+	for twtr in tweeters:
+		tweets = twtr.tweets
+		for tweet in tweets:
+			if winnerPat.match(tweet):
+				cleanTweet = sanitizeTweet(tweet)
+				properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanTweet))
+				award = awardPat.search(cleanTweet)
+				if award:
+					award = sanitizeAwardName(award.group())
+					awardResult[award] = properNouns
+		NUMBER_OF_TWEETER = NUMBER_OF_TWEETER - 1
+		if NUMBER_OF_TWEETER<0:
+			break;
+	return awardResult
 
 def findSimilarCategory(text):
 	awardCategories = getCategoriesFromFile('Categories.txt')
@@ -201,7 +225,7 @@ def findSimilarCategory(text):
 
 	return mostSimilar
 
-
+'''
 def main ():
 	jsonFile = 'goldenglobes.json'
 	tweets = loadJSONFromFile(jsonFile)
@@ -232,6 +256,18 @@ def main ():
 
 	# PRINT RESULTS
 	# printResults(hosts, possibleWinners)
+	'''
 
+def main():
+	jsonFile = 'goldenglobes.json'
+	eventFile = 'event.txt'
+	categoryFile = 'Categories.txt'
+	tweets = loadJSONFromFile(jsonFile)
+	awardCategories = getCategoriesFromFile(categoryFile)
+	eventObject = getEventObject(eventFile)
+
+	awardResult = {}#  key is the name of the award, value is the actual winner of the award
+	tweeters = eventObject.reporters
+	awardResult = findWinner(tweeters,awardCategories)
 	
 main()
