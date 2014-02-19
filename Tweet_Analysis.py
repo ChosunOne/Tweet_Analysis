@@ -205,7 +205,7 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
                 retweet = False
 
                 #If the user mentioned is not in the user list, create a ghost of the user
-                if word not in user_list.keys():
+                if word not in user_list.keys() and word not in ghost_list:
                     ghosted_twter = tweeter()
                     ghosted_twter.userName = word
                     ghosted_twter.score = 1
@@ -223,6 +223,12 @@ def tweetParseLineObjects(json_object, keyword_list, tweeter_list, word_list, us
                 #Check to see if the retweet belongs to a ghost
                 if word in ghost_list:
                     ghost = ghost_list[word]
+
+                    ghosted_twt = tweet()
+                    ghosted_twt.text = twt.text
+
+                    if ghosted_twt not in ghost.tweets:
+                        ghost.tweets.append(ghosted_twt)
 
                     for t in ghost.tweets:
                         if t in text:
