@@ -52,19 +52,6 @@ def findWinnerTweets(text, categories):
 	return categoryMentioned'''
 
 
-def findPresenterTweets(text, categories):
-	pattern = re.compile(".* presented .*", re.IGNORECASE)
-	# Blah presenting an award 
-	# be presenting at GG
-	# NNP .* V (presented)
-
-	presentation = False
-
-	if pattern.match(text):
-		presentation = True
-
-	return presentation
-
 def extractProperNouns(tokenizedText):
 	taggedText = pos_tag(tokenizedText)
 	grammar = "NP: {<NNP>*}"
@@ -156,9 +143,9 @@ def sanitizeTweet(text):
 		cleanTweet = re.sub("http.*","",cleanTweet)
 
 	# remove @ and #
-	cleanTweet = re.sub("@", "", cleanTweet)
-	cleanTweet = re.sub("#", "", cleanTweet)
-	cleanTweet = re.sub("\"", "", cleanTweet)
+	symbolsStopList = ["@", "#", "\"", "!", "=", "\.", "\(", "\)", "Golden Globes"]
+	for symbol in symbolsStopList:
+		cleanTweet = re.sub("%s" % symbol, "", cleanTweet)
 
 	# remove source
 	cleanTweet = re.sub("HuffingtonPost", "", cleanTweet)
@@ -172,6 +159,48 @@ def sanitizeAwardName(text):
 		cleanAward = re.sub("%s " % stopWord, "", cleanAward)
 
 	return cleanAward
+
+
+def sanitizeForPresenters(text):
+	cleanText = sanitizeTweet(text)
+	cleanText = re.sub("(?i)Present", "", cleanText)
+
+	return cleanText
+
+def findPresenterTweets(tweets):
+	# pattern = re.compile(".* present.*", re.IGNORECASE)
+	# Blah presenting an award 
+	# be presenting at GG
+	# NNP .* V (presented)
+
+	# 73 tweeters  3583 tweets ...?
+
+	possiblePresenters = []
+	patterns = [".*presenter .*", ".* presenting .*", ".* presentation .*", ".* presents .*"]
+
+	for tweet in tweets:
+		text = tweet['text']
+
+
+
+		for pattern in patterns:
+			rePat = re.compile(pattern, re.IGNORECASE)
+			if rePat.match(text):
+				cleanText = sanitizeForPresenters(text)
+
+				properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanText))
+				names = []
+				for properNoun in properNouns:
+					if len(properNoun.split()) >= 2 and len(properNoun.split()) < 5:
+						if "Best" not in properNoun and "Award" not in properNoun:
+							names.append(properNoun)
+				if names:
+					possiblePresenters += names
+
+
+	data = collections.Counter(possiblePresenters)
+	print(data.most_common())
+
 
 def findWinners(tweeter):#(tweeter)
 	text = tweet['text']
@@ -267,13 +296,17 @@ def main():
 
 	awardResult = {}#  key is the name of the award, value is the actual winner of the award
 	tweeters = eventObject.reporters
-	awardResult = findWinners(tweeters,awardCategories)
+	for twtr in tweeters:
+		print(twtr.userName)
+
+	# findPresenterTweets(tweets)
+	# awardResult = findWinners(tweeters,awardCategories)
 	
-	for award in awardCategories:
-		print(award, "\n===========")
-		if award not in awardResult.keys():
-			print(None)
-		else:
-			print(awardResult[award], "\n")
+	# for award in awardCategories:
+	# 	print(award, "\n===========")
+	# 	if award not in awardResult.keys():
+	# 		print(None)
+	# 	else:
+	# 		print(awardResult[award], "\n")
 
 main()
