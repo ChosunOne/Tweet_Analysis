@@ -483,9 +483,9 @@ def main():
             except:
                 output.write('Error writing actor to file \r')
 
-    for twter in tweeters.values():
-        if twter.score > POPULARITY_THRESHOLD:
-            top_tweeters.append(twter)
+    for twter in sorted_users.values():
+        #if twter.score > POPULARITY_THRESHOLD:
+        top_tweeters.append(twter)
 
     awardEvent = createEvent('Golden Globes', actors_list, awards_list, top_tweeters, words, keywords, hashtags)
 
