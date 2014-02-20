@@ -29,6 +29,11 @@ def getEventObject(filePath):
 	eventObject = pickle.load( open( "event.txt", "rb" ) )
 	return eventObject
 
+def getProperNouns(filePath):
+	properNouns =[]
+	with open(filePath, 'r',encoding = 'latin-1') as f:
+		properNouns = [row.strip('\n') for row in f]
+	return properNouns
 
 def findHostTweets(text):
 	pattern = re.compile(".* hosting .* Golden Globes .*", re.IGNORECASE)
@@ -39,8 +44,6 @@ def findHostTweets(text):
 		hostMentioned = True
 
 	return hostMentioned
-
-
 
 def extractProperNouns(tokenizedText):
 	taggedText = pos_tag(tokenizedText)
@@ -61,8 +64,6 @@ def extractProperNouns(tokenizedText):
 				# ignore 'Golden Globes'
 				if phrase not in gg:
 					properNouns.append(phrase)
-
-
 	return properNouns
 
 def findHosts(text, possibleHosts):
@@ -144,21 +145,33 @@ def findPresenterTweets(tweets):
 	print(data.most_common())
 
 
-def findWinners(tweeters, categories):
+def findWinners(tweeters, categories,properNouns):#{}
 	awardResult = {}
+	THRESHOLD = 500
+
 	awardPat = re.compile("best .*",re.IGNORECASE)
 	winnerPat = re.compile(".*win.*",re.IGNORECASE)
 	for twtr in tweeters:
 		tweets = twtr.tweets
 		for tweet in tweets:
 			if winnerPat.match(tweet.text):
+				properNoun =[]
 				cleanTweet = sanitizeTweet(tweet.text)
-				properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanTweet))
+				tokenizedText = nltk.wordpunct_tokenize(cleanTweet)
+				'''for word in tokenizedText:
+					if word in properNouns:
+						properNoun.append(word)
+				if len(properNoun) == 0:'''
+				properNoun = extractProperNouns(tokenizedText)
 				award = awardPat.search(cleanTweet)
 				if award:
 					award = sanitizeAwardName(award.group())
-					mostSimilarAward = findSimilarCategory(award)
-					awardResult[mostSimilarAward] = properNouns
+					#mostSimilarAward = findSimilarCategory(award)
+					awardResult[award] = properNoun
+		THRESHOLD = THRESHOLD -1
+		if THRESHOLD<1:
+			print("THRESHOLD MET")
+			break
 	return awardResult
 
 def findSimilarCategory(text):
@@ -175,23 +188,29 @@ def main():
 	jsonFile = 'goldenglobes.json'
 	eventFile = 'event.txt'
 	categoryFile = 'Categories.txt'
+	#properNounFile = 'proper_phrases.txt'
 	tweets = loadJSONFromFile(jsonFile)
 	awardCategories = getCategoriesFromFile(categoryFile)
 	eventObject = getEventObject(eventFile)
+	properNouns = getProperNouns(properNounFile)
 
 	awardResult = {}#  key is the name of the award, value is the actual winner of the award
 	tweeters = eventObject.reporters
+	i = 1
 	for twtr in tweeters:
 		print(twtr.userName)
+		i = i-1
+		if i==0:
+			break
 
 	# findPresenterTweets(tweets)
-	# awardResult = findWinners(tweeters,awardCategories)
+	awardResult = findWinners(tweeters,awardCategories,properNouns)
 	
-	# for award in awardCategories:
-	# 	print(award, "\n===========")
-	# 	if award not in awardResult.keys():
-	# 		print(None)
-	# 	else:
-	# 		print(awardResult[award], "\n")
+	for award in awardCategories:
+	 	print(award, "\n===========")
+	 	if award not in awardResult.keys():
+	 		print(None)
+	 	else:
+	 		print(awardResult[award], "\n")
 
 main()
