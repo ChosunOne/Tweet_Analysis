@@ -494,6 +494,16 @@ def main():
     with open('event.txt', 'wb') as output:
         pickle.dump(awardEvent, output)
 
+    print('Writing Proper nouns to propernouns.txt')
+
+    with open('propernouns.txt', 'w') as output:
+        for word in properNouns:
+            try:
+                output.write(word)
+                output.write('\r')
+            except:
+                output.write('Error writing proper noun to file\r')
+
     print('Writing Ghost tweets to ghosts.txt')
 
     with open('ghosts.txt', 'w') as output:
