@@ -170,9 +170,9 @@ def findNominees(tweets):
 	print(count)
 
 
-def findWinners(tweeters, categories,properNouns):#{}
+def findWinners(tweeters, categories):
 	awardResult = {}
-	THRESHOLD = 500
+	THRESHOLD = 200
 
 	awardPat = re.compile("best .*",re.IGNORECASE)
 	winnerPat = re.compile(".*win.*",re.IGNORECASE)
@@ -180,26 +180,40 @@ def findWinners(tweeters, categories,properNouns):#{}
 		tweets = twtr.tweets
 		for tweet in tweets:
 			if winnerPat.match(tweet.text):
-				properNoun =[]
+				#print("Found winner")
 				cleanTweet = sanitizeTweet(tweet.text)
-				tokenizedText = nltk.wordpunct_tokenize(cleanTweet)
-				'''for word in tokenizedText:
-					if word in properNouns:
-						properNoun.append(word)
-				if len(properNoun) == 0:'''
-				properNoun = extractProperNouns(tokenizedText)
 				award = awardPat.search(cleanTweet)
 				if award:
+					#print("award found")
+					properNoun =[]
+					firstHalfOfTweet = re.search("(?i).*(?=win)",cleanTweet)
+					tokenizedText = nltk.wordpunct_tokenize(firstHalfOfTweet.group())
+					'''for word in tokenizedText:
+						if word in properNouns:
+							properNoun.append(word)
+						else:
+							properNouns.append(word)
+					if len(properNoun) == 0:'''
+					properNoun = extractProperNouns(tokenizedText)
 					award = sanitizeAwardName(award.group())
-					#mostSimilarAward = findSimilarCategory(award)
-					awardResult[award] = properNoun
+					mostSimilarAward = findSimilarCategory(award)
+					if mostSimilarAward in awardResult:
+						awardResult[mostSimilarAward] +=properNoun
+					else:
+						awardResult[mostSimilarAward] = properNoun
 		THRESHOLD = THRESHOLD -1
 		if THRESHOLD<1:
 			print("THRESHOLD MET")
 			break
 	return awardResult
 
-def findSimilarCategory(text):
+def sanitizeAwardResult(awardResult):
+	for a in awardResult:
+		tuples = collections.Counter(awardResult[a])
+		mostCommon = tuples.most_common()
+		print("\n",a,"\n","-------------------","\n",mostCommon[0:5])
+
+def findSimilarCategory(text,awardCategories):
 	awardCategories = getCategoriesFromFile('Categories.txt')
 	similarities = {}
 	for award in awardCategories:
@@ -213,11 +227,11 @@ def main():
 	jsonFile = 'goldenglobes.json'
 	eventFile = 'event.txt'
 	categoryFile = 'Categories.txt'
-	#properNounFile = 'proper_phrases.txt'
+	properNounFile = 'proper_phrases.txt'
 	tweets = loadJSONFromFile(jsonFile)
-	awardCategories = getCategoriesFromFile(categoryFile)
+	#awardCategories = getCategoriesFromFile(categoryFile)
 	eventObject = getEventObject(eventFile)
-	# properNouns = getProperNouns(properNounFile)
+	properNouns = getProperNouns(properNounFile)
 
 	awardResult = {}#  key is the name of the award, value is the actual winner of the award
 	tweeters = eventObject.reporters
@@ -228,15 +242,9 @@ def main():
 	# 	if i==0:
 	# 		break
 
-	findNominees(tweets)
-	# findPresenters(tweets)
-	# awardResult = findWinners(tweeters,awardCategories,properNouns)
-	
-	# for award in awardCategories:
-	#  	print(award, "\n===========")
-	#  	if award not in awardResult.keys():
-	#  		print(None)
-	#  	else:
-	#  		print(awardResult[award], "\n")
+	#findNominees(tweets)
+	#findPresenters(tweets)
+	awardResult = findWinners(tweeters,awardCategories,properNouns)
+	sanitizeAwardResult(awardResult)
 
 main()
