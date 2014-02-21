@@ -126,7 +126,7 @@ def sanitizeSlang(text):
 	return cleanTweet
 
 
-def findPresenterTweets(tweets):
+def findPresenters(tweets):
 	possiblePresenters = []
 	patterns = ["presenting an award", "presenting for best", "presenting best", "presents .* best", "presenting at the", "presents at the", "is presenting"]
 
@@ -154,6 +154,20 @@ def findPresenterTweets(tweets):
 		print(presenter[0], " (", presenter[1], ")")
 
 	return data.most_common()
+
+
+def findNominees(tweets):
+	count = 0
+	patterns = ["will win"]
+	for tweet in tweets:
+		text = tweet['text']
+
+		for pattern in patterns:
+			rePat = re.compile(".* %s .*" % pattern, re.IGNORECASE)
+			if rePat.match(text):
+				print(text)
+				count += 1
+	print(count)
 
 
 def findWinners(tweeters, categories,properNouns):#{}
@@ -214,7 +228,8 @@ def main():
 	# 	if i==0:
 	# 		break
 
-	findPresenterTweets(tweets)
+	findNominees(tweets)
+	# findPresenters(tweets)
 	# awardResult = findWinners(tweeters,awardCategories,properNouns)
 	
 	# for award in awardCategories:
