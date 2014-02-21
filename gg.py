@@ -9,6 +9,8 @@ from TweetLibrary import *
 
 gg = ['Golden Globes', 'GoldenGlobes', 'golden globes']
 awardNameStopList = ['at', 'the', 'for']
+slangStopList = ["omg", "lol", "ha*ha", "ja.*ja", "na.*na"]
+tagger = nltk.data.load(nltk.tag._POS_TAGGER)
 
 def loadJSONFromFile(filePath):
 	json_data = []
@@ -46,7 +48,8 @@ def findHostTweets(text):
 	return hostMentioned
 
 def extractProperNouns(tokenizedText):
-	taggedText = pos_tag(tokenizedText)
+	# taggedText = pos_tag(tokenizedText)
+	taggedText = tagger.tag(tokenizedText)
 	grammar = "NP: {<NNP>*}"
 	cp = nltk.RegexpParser(grammar)
 	chunkedText = cp.parse(taggedText)
@@ -104,45 +107,53 @@ def sanitizeAwardName(text):
 	return cleanAward
 
 
-def sanitizeForPresenters(text):
-	cleanText = sanitizeTweet(text)
-	cleanText = re.sub("(?i)Present", "", cleanText)
+def sanitizeTweetForPresenters(text):
+	cleanTweet = text
 
-	return cleanText
+	stopList = ["RT.*:", "@.*", "#.*", "\[.*\]", "\(.*\)"]
+	# stopList += slangStopList
+	for stopWord in stopList:
+		cleanTweet = re.sub("(?i)%s " % stopWord, "", cleanTweet)
+
+	return cleanTweet
+
+def sanitizeSlang(text):
+	cleanTweet = text
+	stopList = slangStopList
+	for stopWord in stopList:
+		cleanTweet = re.sub("(?i)%s " % stopWord, "", cleanTweet)
+
+	return cleanTweet
+
 
 def findPresenterTweets(tweets):
-	# pattern = re.compile(".* present.*", re.IGNORECASE)
-	# Blah presenting an award 
-	# be presenting at GG
-	# NNP .* V (presented)
-
-	# 73 tweeters  3583 tweets ...?
-
 	possiblePresenters = []
-	patterns = [".*presenter .*", ".* presenting .*", ".* presentation .*", ".* presents .*"]
+	patterns = ["presenting an award", "presenting for best", "presenting best", "presents .* best", "presenting at the", "presents at the", "is presenting"]
 
 	for tweet in tweets:
 		text = tweet['text']
-
-
-
 		for pattern in patterns:
-			rePat = re.compile(pattern, re.IGNORECASE)
+			rePat = re.compile(".* %s .*" % pattern, re.IGNORECASE)
 			if rePat.match(text):
-				cleanText = sanitizeForPresenters(text)
-
-				properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanText))
-				names = []
-				for properNoun in properNouns:
-					if len(properNoun.split()) >= 2 and len(properNoun.split()) < 5:
-						if "Best" not in properNoun and "Award" not in properNoun:
+				cleanText = re.search("(?i).*(?=%s)" % pattern, text).group()
+				cleanText = sanitizeTweetForPresenters(cleanText)
+				if cleanText:
+					properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanText))
+					names = []
+					for properNoun in properNouns:
+						properNoun = sanitizeSlang(properNoun)
+						if len(properNoun.split()) >= 2 and not properNoun.isupper():
 							names.append(properNoun)
-				if names:
-					possiblePresenters += names
-
+					if names:
+						possiblePresenters += names
+				break
 
 	data = collections.Counter(possiblePresenters)
-	print(data.most_common())
+	print("List of Presenters:\n========================")
+	for presenter in data.most_common():
+		print(presenter[0], " (", presenter[1], ")")
+
+	return data.most_common()
 
 
 def findWinners(tweeters, categories,properNouns):#{}
@@ -192,25 +203,25 @@ def main():
 	tweets = loadJSONFromFile(jsonFile)
 	awardCategories = getCategoriesFromFile(categoryFile)
 	eventObject = getEventObject(eventFile)
-	properNouns = getProperNouns(properNounFile)
+	# properNouns = getProperNouns(properNounFile)
 
 	awardResult = {}#  key is the name of the award, value is the actual winner of the award
 	tweeters = eventObject.reporters
-	i = 1
-	for twtr in tweeters:
-		print(twtr.userName)
-		i = i-1
-		if i==0:
-			break
+	# i = 1
+	# for twtr in tweeters:
+	# 	print(twtr.userName)
+	# 	i = i-1
+	# 	if i==0:
+	# 		break
 
-	# findPresenterTweets(tweets)
-	awardResult = findWinners(tweeters,awardCategories,properNouns)
+	findPresenterTweets(tweets)
+	# awardResult = findWinners(tweeters,awardCategories,properNouns)
 	
-	for award in awardCategories:
-	 	print(award, "\n===========")
-	 	if award not in awardResult.keys():
-	 		print(None)
-	 	else:
-	 		print(awardResult[award], "\n")
+	# for award in awardCategories:
+	#  	print(award, "\n===========")
+	#  	if award not in awardResult.keys():
+	#  		print(None)
+	#  	else:
+	#  		print(awardResult[award], "\n")
 
 main()
