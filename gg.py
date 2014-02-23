@@ -69,14 +69,24 @@ def extractProperNouns(tokenizedText):
 					properNouns.append(phrase)
 	return properNouns
 
-def findHosts(text, possibleHosts):
-	if findHostTweets(text):
-			tokenizedText = nltk.wordpunct_tokenize(text)
-			properNouns = extractProperNouns(tokenizedText)
-			for possibleHost in properNouns:
-				possibleHosts.append(possibleHost)
+def findHosts(tweets):
+	possibleHosts = []
 
-	return possibleHosts
+	for tweet in tweets:
+		text = tweet["text"]
+		if findHostTweets(text):
+				tokenizedText = nltk.wordpunct_tokenize(text)
+				properNouns = extractProperNouns(tokenizedText)
+				for possibleHost in properNouns:
+					possibleHosts.append(possibleHost)
+
+	data = collections.Counter(possibleHosts)
+	print("\n\nList of Hosts:\n========================")
+	for host in data.most_common()[0:2]:
+		print(host[0])
+
+	return data.most_common()
+
 
 def sanitizeTweet(text):
 	# remove rewteet
@@ -280,6 +290,7 @@ def main():
 	# 	if i==0:
 	# 		break
 
+	findHosts(tweets)
 	awardResult = findWinners(tweeters,awardCategories)
 	findPresenters(tweets)
 	findNominees(tweets)
