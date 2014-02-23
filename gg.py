@@ -158,7 +158,7 @@ def findPresenters(tweets):
 				break
 
 	data = collections.Counter(possiblePresenters)
-	print("List of Presenters:\n========================")
+	print("\n\nList of Presenters:\n========================")
 	for presenter in data.most_common():
 		print(presenter[0])
 
@@ -200,12 +200,12 @@ def findNominees(tweets):
 				break
 
 	data = collections.Counter(possibleNominees)
-	print("List of Nominees:\n========================")
+	print("\n\nList of Nominees:\n========================")
 	possibleNominees = list(set(possibleNominees))
 	for nominee in data.most_common():
 		if len(nominee[0]) > 3:
 			print(nominee[0])
-	print(count)
+
 	return data.most_common()
 
 
@@ -241,6 +241,9 @@ def findWinners(tweeters, categories):
 		if THRESHOLD<1:
 			print("THRESHOLD MET")
 			break
+
+	sanitizeAwardResult(awardResult)
+
 	return awardResult
 
 def sanitizeAwardResult(awardResult):
@@ -267,7 +270,6 @@ def main():
 	tweets = loadJSONFromFile(jsonFile)
 	awardCategories = getCategoriesFromFile(categoryFile)
 	eventObject = getEventObject(eventFile)
-	# properNouns = getProperNouns(properNounFile)
 
 	awardResult = {}#  key is the name of the award, value is the actual winner of the award
 	tweeters = eventObject.reporters
@@ -278,9 +280,9 @@ def main():
 	# 	if i==0:
 	# 		break
 
-	#findNominees(tweets)
-	#findPresenters(tweets)
 	awardResult = findWinners(tweeters,awardCategories)
-	sanitizeAwardResult(awardResult)
+	findPresenters(tweets)
+	findNominees(tweets)
+
 
 main()
