@@ -160,7 +160,7 @@ def findPresenters(tweets):
 	data = collections.Counter(possiblePresenters)
 	print("List of Presenters:\n========================")
 	for presenter in data.most_common():
-		print(presenter[0], " (", presenter[1], ")")
+		print(presenter[0])
 
 	return data.most_common()
 
