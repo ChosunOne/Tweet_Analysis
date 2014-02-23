@@ -9,7 +9,7 @@ from TweetLibrary import *
 
 gg = ['Golden Globes', 'GoldenGlobes', 'golden globes']
 awardNameStopList = ['at', 'the', 'for']
-slangStopList = ["omg", "lol", "ha*ha", "ja.*ja", "na.*na"]
+slangStopList = ["omg", "lol", "ha*ha", "ja.*ja", "na.*na", "wow", "idk", "wtf"]
 tagger = nltk.data.load(nltk.tag._POS_TAGGER)
 
 def loadJSONFromFile(filePath):
@@ -117,6 +117,15 @@ def sanitizeTweetForPresenters(text):
 
 	return cleanTweet
 
+def sanitizeTweetForNominees(text):
+	cleanTweet = text
+	words = ["I", "he", "she", "it", "if"]
+	stopList = ["RT.*:","@.*: ","@", "#"]
+	for stopWord in stopList:
+		cleanTweet = re.sub("(?i)%s " % stopWord, "", cleanTweet)
+
+	return cleanTweet
+
 def sanitizeSlang(text):
 	cleanTweet = text
 	stopList = slangStopList
@@ -157,17 +166,48 @@ def findPresenters(tweets):
 
 
 def findNominees(tweets):
-	count = 0
-	patterns = ["will win"]
+	possibleNominees = []
+	# patterns = ["should have won", "is nominated", "will win .*best", "will win .*award", "hope .*wins"]
+
+	patterns = ["wish .* won","hope .*wins", "is nominated", "will win .* best"]
+
 	for tweet in tweets:
 		text = tweet['text']
 
 		for pattern in patterns:
 			rePat = re.compile(".* %s .*" % pattern, re.IGNORECASE)
 			if rePat.match(text):
-				print(text)
-				count += 1
+				cleanText = ""
+				if re.search("(?i)(?<=hope ).*(?=win)", text):
+					cleanText = re.search("(?i)(?<=hope ).*(?=win)", text).group()
+				elif re.search("(?i)(?<=wish ).*(?=won)", text):
+					cleanText = re.search("(?i)(?<=wish ).*(?=won)", text).group()
+				elif re.search("(?i).*(?=%s)" % pattern, text):
+					cleanText = re.search("(?i).*(?=%s)" % pattern, text).group()
+				else:
+					continue
+
+				cleanText = sanitizeTweetForNominees(cleanText)
+
+				properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanText))
+				# print(cleanText, " || ", properNouns, "\n")
+				names = []
+				for properNoun in properNouns:
+					properNoun = sanitizeSlang(properNoun)
+					names.append(properNoun)
+				if names:
+					possibleNominees += names
+				break
+
+	data = collections.Counter(possibleNominees)
+	print("List of Nominees:\n========================")
+	possibleNominees = list(set(possibleNominees))
+	for nominee in data.most_common():
+		if len(nominee[0]) > 3:
+			print(nominee[0])
 	print(count)
+	return data.most_common()
+
 
 
 def findWinners(tweeters, categories,properNouns):#{}
