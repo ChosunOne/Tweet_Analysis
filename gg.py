@@ -220,27 +220,23 @@ def findWinners(tweeters, categories):
 		tweets = twtr.tweets
 		for tweet in tweets:
 			if winnerPat.match(tweet.text):
-				#print("Found winner")
 				cleanTweet = sanitizeTweet(tweet.text)
 				award = awardPat.search(cleanTweet)
+
 				if award:
-					#print("award found")
 					properNoun =[]
 					firstHalfOfTweet = re.search("(?i).*(?=win)",cleanTweet)
 					tokenizedText = nltk.wordpunct_tokenize(firstHalfOfTweet.group())
-					'''for word in tokenizedText:
-						if word in properNouns:
-							properNoun.append(word)
+
+					if tokenizedText:
+						properNoun = extractProperNouns(tokenizedText)
+						award = sanitizeAwardName(award.group())
+						mostSimilarAward = findSimilarCategory(award, categories)
+						
+						if mostSimilarAward in awardResult:
+							awardResult[mostSimilarAward] +=properNoun
 						else:
-							properNouns.append(word)
-					if len(properNoun) == 0:'''
-					properNoun = extractProperNouns(tokenizedText)
-					award = sanitizeAwardName(award.group())
-					mostSimilarAward = findSimilarCategory(award)
-					if mostSimilarAward in awardResult:
-						awardResult[mostSimilarAward] +=properNoun
-					else:
-						awardResult[mostSimilarAward] = properNoun
+							awardResult[mostSimilarAward] = properNoun
 		THRESHOLD = THRESHOLD -1
 		if THRESHOLD<1:
 			print("THRESHOLD MET")
@@ -251,10 +247,10 @@ def sanitizeAwardResult(awardResult):
 	for a in awardResult:
 		tuples = collections.Counter(awardResult[a])
 		mostCommon = tuples.most_common()
-		print("\n",a,"\n","-------------------","\n",mostCommon[0:5])
+		print("\n\n",a,"\n========================\n",mostCommon[0:5])
 
 def findSimilarCategory(text,awardCategories):
-	awardCategories = getCategoriesFromFile('Categories.txt')
+	# awardCategories = getCategoriesFromFile('Categories.txt')
 	similarities = {}
 	for award in awardCategories:
 		seq = difflib.SequenceMatcher(a=text.lower(), b=award.lower())
@@ -269,9 +265,9 @@ def main():
 	categoryFile = 'Categories.txt'
 	properNounFile = 'proper_phrases.txt'
 	tweets = loadJSONFromFile(jsonFile)
-	#awardCategories = getCategoriesFromFile(categoryFile)
+	awardCategories = getCategoriesFromFile(categoryFile)
 	eventObject = getEventObject(eventFile)
-	properNouns = getProperNouns(properNounFile)
+	# properNouns = getProperNouns(properNounFile)
 
 	awardResult = {}#  key is the name of the award, value is the actual winner of the award
 	tweeters = eventObject.reporters
@@ -284,7 +280,7 @@ def main():
 
 	#findNominees(tweets)
 	#findPresenters(tweets)
-	awardResult = findWinners(tweeters,awardCategories,properNouns)
+	awardResult = findWinners(tweeters,awardCategories)
 	sanitizeAwardResult(awardResult)
 
 main()
