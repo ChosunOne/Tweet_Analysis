@@ -1,6 +1,6 @@
 class tweeter:
     def __init__(self):
-        self.score = 0
+        self.score = 1
         self.tweets = []
         self.userName = ''
         self.userId = 0
@@ -8,7 +8,7 @@ class tweeter:
 class tweet:
     def __init__(self):
         self.text = ''
-        self.score = 0
+        self.score = 1
         self.tweetId = 0
 
 class event:

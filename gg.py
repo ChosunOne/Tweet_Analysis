@@ -6,6 +6,7 @@ import re
 import collections, difflib
 import pickle
 from TweetLibrary import *
+from collections import OrderedDict
 
 gg = ['Golden Globes', 'GoldenGlobes', 'golden globes']
 awardNameStopList = ['at', 'the', 'for']
@@ -38,7 +39,7 @@ def getProperNouns(filePath):
 	return properNouns
 
 def findHostTweets(text):
-	pattern = re.compile(".* hosting .* Golden Globes .*", re.IGNORECASE)
+	pattern = re.compile(".* host.* Golden Globes .*", re.IGNORECASE)
 
 	hostMentioned = False
 
@@ -69,23 +70,7 @@ def extractProperNouns(tokenizedText):
 					properNouns.append(phrase)
 	return properNouns
 
-def findHosts(tweets):
-	possibleHosts = []
 
-	for tweet in tweets:
-		text = tweet["text"]
-		if findHostTweets(text):
-				tokenizedText = nltk.wordpunct_tokenize(text)
-				properNouns = extractProperNouns(tokenizedText)
-				for possibleHost in properNouns:
-					possibleHosts.append(possibleHost)
-
-	data = collections.Counter(possibleHosts)
-	print("\n\nList of Hosts:\n========================")
-	for host in data.most_common()[0:2]:
-		print(host[0])
-
-	return data.most_common()
 
 
 def sanitizeTweet(text):
@@ -144,79 +129,101 @@ def sanitizeSlang(text):
 
 	return cleanTweet
 
+def findHosts(twtrs):
+	possibleHosts = {}
 
-def findPresenters(tweets):
-	possiblePresenters = []
+	for twtr in twtrs:
+		for twt in twtr.tweets:
+			text = twt.text
+			if findHostTweets(text):
+					tokenizedText = nltk.wordpunct_tokenize(text)
+					properNouns = extractProperNouns(tokenizedText)
+					for possibleHost in properNouns:
+						if possibleHost not in possibleHosts.keys():
+							possibleHosts[possibleHost] = twtr.score
+						else:
+							possibleHosts[possibleHost] = possibleHosts[possibleHost] + twtr.score
+
+	sorted_hosts = OrderedDict(sorted(possibleHosts.items(), key=lambda possibleHosts: possibleHosts[1], reverse=True))
+	#data = collections.Counter(possibleHosts)
+	print("\n\nList of Hosts:\n========================")
+	for host in sorted_hosts.keys():
+		if sorted_hosts[host] > 60:
+			print(host, sorted_hosts[host])
+
+def findPresenters(twtrs):
+	possiblePresenters = {}
 	patterns = ["presenting an award", "presenting for best", "presenting best", "presents .* best", "presenting at the", "presents at the", "is presenting"]
 
-	for tweet in tweets:
-		text = tweet['text']
-		for pattern in patterns:
-			rePat = re.compile(".* %s .*" % pattern, re.IGNORECASE)
-			if rePat.match(text):
-				cleanText = re.search("(?i).*(?=%s)" % pattern, text).group()
-				cleanText = sanitizeTweetForPresenters(cleanText)
-				if cleanText:
-					properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanText))
-					names = []
-					for properNoun in properNouns:
-						properNoun = sanitizeSlang(properNoun)
-						if len(properNoun.split()) >= 2 and not properNoun.isupper():
-							names.append(properNoun)
-					if names:
-						possiblePresenters += names
-				break
+	for twtr in twtrs:
+		for twt in twtr.tweets:
+			text = twt.text
+			for pattern in patterns:
+				rePat = re.compile(".* %s .*" % pattern, re.IGNORECASE)
+				if rePat.match(text):
+					cleanText = re.search("(?i).*(?=%s)" % pattern, text).group()
+					cleanText = sanitizeTweetForPresenters(cleanText)
+					if cleanText:
+						properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanText))
+						
+						for properNoun in properNouns:
+							properNoun = sanitizeSlang(properNoun)
+							if len(properNoun.split()) >= 2 and not properNoun.isupper():
+								if properNoun not in possiblePresenters:
+									possiblePresenters[properNoun] = twtr.score
+								else:
+									possiblePresenters[properNoun] = possiblePresenters[properNoun] + twtr.score
+					break
 
-	data = collections.Counter(possiblePresenters)
+	sorted_presenters = OrderedDict(sorted(possiblePresenters.items(), key=lambda possiblePresenters: possiblePresenters[1], reverse=True))
+
 	print("\n\nList of Presenters:\n========================")
-	for presenter in data.most_common():
-		print(presenter[0])
+	for presenter in sorted_presenters.keys():
+		if sorted_presenters[presenter] > 0:
+			print(presenter, sorted_presenters[presenter])
 
-	return data.most_common()
 
-
-def findNominees(tweets):
-	possibleNominees = []
+def findNominees(twtrs):
+	possibleNominees = {}
 	# patterns = ["should have won", "is nominated", "will win .*best", "will win .*award", "hope .*wins"]
 
 	patterns = ["wish .* won","hope .*wins", "is nominated", "will win .* best"]
 
-	for tweet in tweets:
-		text = tweet['text']
+	for twtr in twtrs:
+		for twt in twtr.tweets:
+			text = twt.text
 
-		for pattern in patterns:
-			rePat = re.compile(".* %s .*" % pattern, re.IGNORECASE)
-			if rePat.match(text):
-				cleanText = ""
-				if re.search("(?i)(?<=hope ).*(?=win)", text):
-					cleanText = re.search("(?i)(?<=hope ).*(?=win)", text).group()
-				elif re.search("(?i)(?<=wish ).*(?=won)", text):
-					cleanText = re.search("(?i)(?<=wish ).*(?=won)", text).group()
-				elif re.search("(?i).*(?=%s)" % pattern, text):
-					cleanText = re.search("(?i).*(?=%s)" % pattern, text).group()
-				else:
-					continue
+			for pattern in patterns:
+				rePat = re.compile(".* %s .*" % pattern, re.IGNORECASE)
+				if rePat.match(text):
+					cleanText = ""
+					if re.search("(?i)(?<=hope ).*(?=win)", text):
+						cleanText = re.search("(?i)(?<=hope ).*(?=win)", text).group()
+					elif re.search("(?i)(?<=wish ).*(?=won)", text):
+						cleanText = re.search("(?i)(?<=wish ).*(?=won)", text).group()
+					elif re.search("(?i).*(?=%s)" % pattern, text):
+						cleanText = re.search("(?i).*(?=%s)" % pattern, text).group()
+					else:
+						continue
 
-				cleanText = sanitizeTweetForNominees(cleanText)
+					cleanText = sanitizeTweetForNominees(cleanText)
 
-				properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanText))
-				# print(cleanText, " || ", properNouns, "\n")
-				names = []
-				for properNoun in properNouns:
-					properNoun = sanitizeSlang(properNoun)
-					names.append(properNoun)
-				if names:
-					possibleNominees += names
-				break
+					properNouns = extractProperNouns(nltk.wordpunct_tokenize(cleanText))
+					# print(cleanText, " || ", properNouns, "\n")
+					for properNoun in properNouns:
+						properNoun = sanitizeSlang(properNoun)
+						if properNoun not in possibleNominees:
+							possibleNominees[properNoun] = twtr.score
+						else:
+							possibleNominees[properNoun] = possibleNominees[properNoun] + twtr.score
+					break
 
-	data = collections.Counter(possibleNominees)
+	sorted_nominees = OrderedDict(sorted(possibleNominees.items(), key=lambda possibleNominees: possibleNominees[1], reverse=True))
+
 	print("\n\nList of Nominees:\n========================")
-	possibleNominees = list(set(possibleNominees))
-	for nominee in data.most_common():
-		if len(nominee[0]) > 3:
-			print(nominee[0])
-
-	return data.most_common()
+	for nominee in sorted_nominees.keys():
+		if sorted_nominees[nominee] > 0:
+			print(nominee, sorted_nominees[nominee])
 
 
 
@@ -277,7 +284,7 @@ def main():
 	eventFile = 'event.txt'
 	categoryFile = 'Categories.txt'
 	properNounFile = 'proper_phrases.txt'
-	tweets = loadJSONFromFile(jsonFile)
+	#tweets = loadJSONFromFile(jsonFile)
 	awardCategories = getCategoriesFromFile(categoryFile)
 	eventObject = getEventObject(eventFile)
 
@@ -290,10 +297,10 @@ def main():
 	# 	if i==0:
 	# 		break
 
-	findHosts(tweets)
-	awardResult = findWinners(tweeters,awardCategories)
-	findPresenters(tweets)
-	findNominees(tweets)
+	findHosts(tweeters)
+	awardResult = findWinners(tweeters, awardCategories)
+	findPresenters(tweeters)
+	findNominees(tweeters)
 
 
 main()
