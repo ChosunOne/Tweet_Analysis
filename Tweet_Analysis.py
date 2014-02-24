@@ -39,13 +39,13 @@ def keywordCheck(string):
     else:
         return False
 
-def createEvent(name, actor_list, award_list, top_tweeter_list, word_list, keyword_list, hashtag_list):
+def createEvent(name, top_tweeter_list, word_list, keyword_list, hashtag_list):
     """Creates an event that will be reported to the user"""
 
     Event = event()
     Event.name = name
-    Event.actors = actor_list
-    Event.awards = award_list
+ #   Event.actors = actor_list
+ #   Event.awards = award_list
     Event.reporters = top_tweeter_list
     Event.words_dict = word_list
     Event.tags = hashtag_list
@@ -369,7 +369,7 @@ def main():
     sorted_keywords = OrderedDict(sorted(filtered_keywords.items(), key=lambda filtered_keywords: filtered_keywords[1], reverse=True))
 
     #Extract the proper nouns from the word list
-    properNouns = properNounExtractor(sorted_keywords)
+#    properNouns = properNounExtractor(sorted_keywords)
 
     #Write the most popular hashtags to file
     print('Writing popular hashtags to hashtags.txt')
@@ -430,9 +430,9 @@ def main():
                 for twt in twter.tweets:
                     try:
                         #Find the proper noun phrases
-                        protoPhrases = []
-                        protoPhrases = properNounMatcher(nltk.wordpunct_tokenize(twt.text), properNouns)
-                        properNounPhraser(protoPhrases, properNouns, properPhrases)
+#                        protoPhrases = []
+#                        protoPhrases = properNounMatcher(nltk.wordpunct_tokenize(twt.text), properNouns)
+#                        properNounPhraser(protoPhrases, properNouns, properPhrases)
                         #Only write the top tweets
                         if i<20:
                             output.write('   ')
@@ -440,69 +440,65 @@ def main():
                             output.write('\r')
                     except:
                         output.write('Error writing tweet to file\r')
-            if (i % 500 == 0) and (i <= 2500):
-                print(i, ' out of 2500 tweeters processed')
+ #           if (i % 500 == 0) and (i <= 2500):
+ #               print(i, ' out of 2500 tweeters processed')
 
-    print('Writing proper noun phrases to proper_phrases.txt')
+#    print('Writing proper noun phrases to proper_phrases.txt')
 
-    with open('proper_phrases.txt', 'w') as output:
-        for phrase in properPhrases:
-            try:
-                output.write(phrase)
-                output.write('\r')
-            except:
-                output.write('Error writing proper noun phrase to file \r')
+#    with open('proper_phrases.txt', 'w') as output:
+#        for phrase in properPhrases:
+#            try:
+#                output.write(phrase)
+#                output.write('\r')
+#            except:
+#                output.write('Error writing proper noun phrase to file \r')
 
-    print('Finding Awards')
+#    print('Finding Awards')
 
-    awards_list = []
-    awards_list = findAwards(properPhrases)
+#    awards_list = []
+#    awards_list = findAwards(properPhrases)
 
-    print('Writing discovered awards to awards.txt')
+#    print('Writing discovered awards to awards.txt')
 
-    with open('awards.txt', 'w') as output:
-        for award in awards_list:
-            try:
-                output.write(award)
-                output.write('\r')
-            except:
-                output.write('Error writing award to file \r')
+#    with open('awards.txt', 'w') as output:
+#        for award in awards_list:
+#            try:
+#                output.write(award)
+#                output.write('\r')
+#            except:
+#                output.write('Error writing award to file \r')
 
-    print('Finding Actors')
+#    print('Finding Actors')
 
-    actors_list = []
-    actors_list = findActors(properPhrases)
+#    actors_list = []
+#    actors_list = findActors(properPhrases)
 
-    print('Writing discovered actors to actors.txt')
+#    print('Writing discovered actors to actors.txt')
 
-    with open('actors.txt', 'w') as output:
-        for actor in actors_list:
-            try:
-                output.write(actor)
-                output.write('\r')
-            except:
-                output.write('Error writing actor to file \r')
+#    with open('actors.txt', 'w') as output:
+#        for actor in actors_list:
+#            try:
+#                output.write(actor)
+#                output.write('\r')
+#            except:
+#                output.write('Error writing actor to file \r')
 
-    for twter in sorted_users.values():
-        #if twter.score > POPULARITY_THRESHOLD:
-        top_tweeters.append(twter)
-
-    awardEvent = createEvent('Golden Globes', actors_list, awards_list, top_tweeters, words, keywords, hashtags)
+    awardEvent = createEvent('Golden Globes', sorted_users.values(), words, keywords, hashtags)
 
     print('Writing Event to event.txt')
 
     with open('event.txt', 'wb') as output:
         pickle.dump(awardEvent, output)
 
-    print('Writing Proper nouns to propernouns.txt')
+#    print('Writing Proper nouns to propernouns.txt')
 
-    with open('propernouns.txt', 'w') as output:
-        for word in properNouns:
-            try:
-                output.write(word)
-                output.write('\r')
-            except:
-                output.write('Error writing proper noun to file\r')
+#    with open('propernouns.txt', 'w') as output:
+#        for word in properNouns:
+#            try:
+#                output.write(word)
+#                output.write('\r')
+#            except:
+#                output.write('Error writing proper noun to file\r')
 
     print('Writing Ghost tweets to ghosts.txt')
 
